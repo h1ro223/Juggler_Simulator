@@ -1337,9 +1337,9 @@ function leverSEKey() {
     const gameNo = Math.floor(state.bonusPaid / 14) + 1; // 1始まり
     if ((gameNo - 1) % 7 === 0) return 'LEVERSP';
   }
-  /* ゴーゴー3 軍艦マーチver: COUNT 84→98 / 168→182 / 252→266 のレバーで専用音 */
+  /* ゴーゴー3 軍艦マーチver: COUNT 0→14 / 84→98 / 168→182 / 252→266 のレバーで専用音 */
   if (state.inBonus && state.bonusType === 'BB' && (state.bonusVer === 'GSP_A' || state.bonusVer === 'GSP_B') &&
-      [84, 168, 252].includes(state.bonusPaid)) {
+      [0, 84, 168, 252].includes(state.bonusPaid)) {
     return state.bonusVer === 'GSP_A' ? 'LEVERSP_A' : 'LEVERSP_B';
   }
   return 'LEVER';
@@ -1370,7 +1370,7 @@ function doLeverAction() {
   if (key.startsWith('LEVERSP')) {
     /* 軍艦マーチverの節目: LeverSP(ゴーゴー3はLeverSP_A/B)を主役にしつつ、通常Leverも音量を絞って同時再生 */
     audio.playSE(key);
-    audio.playSE('LEVER', true, LEVER_SUB_VOL);
+    if (key === 'LEVERSP') audio.playSE('LEVER', true, LEVER_SUB_VOL); // 重ね再生はアイムのみ(ゴーゴー3のLeverSP_A/Bは完全差し替え)
   } else {
     audio.playSE('LEVER');
   }
