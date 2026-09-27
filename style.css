@@ -543,6 +543,14 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 }
 .custom-status { font-size: 11px; color: var(--gold); text-align: center; margin: 4px 0 8px; }
 .custom-btns { display: flex; gap: 8px; margin-top: 10px; }
+/* 無効☑の一括切り替え */
+.custom-bulk { display: flex; justify-content: flex-end; margin: 2px 0 6px; }
+#btnCustomAllOff {
+  padding: 6px 12px; border-radius: 8px; border: 1px solid #8a5a5a;
+  background: linear-gradient(180deg, #3a2a2e, #241a1d); color: #f0b8b8;
+  font-size: 11px; font-weight: bold; letter-spacing: .5px; cursor: pointer;
+}
+#btnCustomAllOff:active { transform: translateY(1px); }
 .custom-btns .gold-btn { flex: 1.2; margin: 0; }
 .custom-btns .sub-close { flex: 1; margin-top: 0; }
 

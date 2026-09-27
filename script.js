@@ -3512,6 +3512,20 @@ function bindEvents() {
   $('systemOverlay').addEventListener('click', e => { if (e.target === $('systemOverlay')) $('systemOverlay').hidden = true; });
 
   /* --- カスタム設定モード --- */
+  /* 無効☑の一括切り替え: 全部☑済みなら「全て解除」、それ以外は「全て無効にする」 */
+  function customAllOffChecked() { return CUSTOM_KEYS.every(({ k }) => $('customOff_' + k) && $('customOff_' + k).checked); }
+  function refreshCustomAllOffBtn() {
+    $('btnCustomAllOff').textContent = customAllOffChecked() ? '無効を全て解除' : '全て無効にする';
+  }
+  $('btnCustomAllOff').addEventListener('click', () => {
+    const on = !customAllOffChecked();
+    CUSTOM_KEYS.forEach(({ k }) => {
+      const cb = $('customOff_' + k), inp = $('customIn_' + k);
+      if (cb) cb.checked = on;
+      if (inp) inp.disabled = on;
+    });
+    refreshCustomAllOffBtn();
+  });
   function buildCustomRows() {
     const wrap = $('customRows');
     wrap.innerHTML = '';
@@ -3529,8 +3543,10 @@ function bindEvents() {
       /* 無効☑で入力欄をグレーアウト */
       row.querySelector('#customOff_' + k).addEventListener('change', e => {
         row.querySelector('#customIn_' + k).disabled = e.target.checked;
+        refreshCustomAllOffBtn();
       });
     });
+    refreshCustomAllOffBtn();
     /* 状態表示 */
     let stEl = $('customStatus');
     if (!stEl) {
