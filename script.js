@@ -539,6 +539,7 @@ const BGM_FILES = {
   /* ゴーゴー3: 100G以内のゾロ目でBB (3曲からランダム) */
   BBHIT_SP1: './BGM/BBhit_SP1.mp3', BBSP1: './BGM/BBSP1.mp3', BBFINISHSP1: './BGM/BBFinishSP1.mp3', // コロブチカ
   BBHIT_SP2: './BGM/BBhit_SP2.mp3', BBSP2: './BGM/BBSP2.mp3', BBFINISHSP2: './BGM/BBFinishSP2.mp3', // クラリネットをこわしちゃった
+  BBSP2_INTRO: './BGM/BBSP2_Intro.mp3', // クラリネット: hit終了後→このイントロ→BBSP2ループ (空白0)
   BBHIT_SP3: './BGM/BBhit_SP3.mp3', BBSP3: './BGM/BBSP3.mp3', BBFINISHSP3: './BGM/BBFinishSP3.mp3', // 魔王
   BBFINISHX2: './BGM/BBFinishX_2nd.mp3',  // セカンドゾーン終了
   FUNKY: './BGM/777.mp3'                  // シークレット曲 (777ver完走で解放)
@@ -559,7 +560,7 @@ const BB_VERS = {
   GSP_A:  { hit: 'BBHITSP_A', loop: 'BBSP_A', fin: 'BBFINISHSP_A', grape: 'GRAPE14SP_A' }, // 軍艦マーチ(男性)
   GSP_B:  { hit: 'BBHITSP_B', loop: 'BBSP_B', fin: 'BBFINISHSP_B', grape: 'GRAPE14SP_B' }, // 軍艦マーチ(女性)
   GZ1:    { hit: 'BBHIT_SP1', loop: 'BBSP1',  fin: 'BBFINISHSP1',  grape: 'GRAPE14' },     // コロブチカ
-  GZ2:    { hit: 'BBHIT_SP2', loop: 'BBSP2',  fin: 'BBFINISHSP2',  grape: 'GRAPE14' },     // クラリネットをこわしちゃった
+  GZ2:    { hit: 'BBHIT_SP2', loop: 'BBSP2',  fin: 'BBFINISHSP2',  grape: 'GRAPE14', intro: 'BBSP2_INTRO' }, // クラリネットをこわしちゃった
   GZ3:    { hit: 'BBHIT_SP3', loop: 'BBSP3',  fin: 'BBFINISHSP3',  grape: 'GRAPE14' }      // 魔王
 };
 
@@ -602,7 +603,7 @@ const ASSET_OWNER = {};
  'BBHITX', 'BBFINISHX', 'GOGOX', 'BBX1', 'BBX2', 'BBHITX2', 'BBX2ND', 'BBFINISHX2', 'FUNKY',
  'LEVERSP', 'GRAPE14SP', 'GRAPE14X', 'REPLAY1', 'REPLAY2', 'REPLAY3', 'GOGO'].forEach(k => { ASSET_OWNER[k] = 'aime'; });
 ['BB_A', 'BB_B', 'BBHITSP_A', 'BBSP_A', 'BBFINISHSP_A', 'BBHITSP_B', 'BBSP_B', 'BBFINISHSP_B',
- 'BBHIT_SP1', 'BBSP1', 'BBFINISHSP1', 'BBHIT_SP2', 'BBSP2', 'BBFINISHSP2', 'BBHIT_SP3', 'BBSP3', 'BBFINISHSP3',
+ 'BBHIT_SP1', 'BBSP1', 'BBFINISHSP1', 'BBHIT_SP2', 'BBSP2', 'BBFINISHSP2', 'BBSP2_INTRO', 'BBHIT_SP3', 'BBSP3', 'BBFINISHSP3',
  'GRAPE14SP_A', 'GRAPE14SP_B', 'LEVERSP_A', 'LEVERSP_B', 'REPLAY'].forEach(k => { ASSET_OWNER[k] = 'gogo'; });
 function assetUsable(k) { return !ASSET_OWNER[k] || ASSET_OWNER[k] === MACHINE_ID; }
 
@@ -714,7 +715,38 @@ const audio = {
     this.bgmFallbackEl = base;
     this.bgmFallbackMult = mult;
   },
+  /* イントロ→ループを空白なしでつなぐ (WebAudioで開始時刻をサンプル単位で予約) */
+  playBGMIntro(introKey, loopKey) {
+    this.stopBGM();
+    if (!state.bgmOn) return;
+    const ib = this.buffers[introKey], lb = this.buffers[loopKey];
+    if (ib && lb && this.ctx) {
+      const t0 = this.ctx.currentTime + 0.02;
+      const intro = this.ctx.createBufferSource();
+      intro.buffer = ib; intro.connect(this.bgmGain); intro.start(t0);
+      const src = this.ctx.createBufferSource();
+      src.buffer = lb; src.loop = true; src.connect(this.bgmGain);
+      src.start(t0 + ib.duration); // イントロ終了の瞬間にループ開始
+      this.bgmIntroSrc = intro;
+      this.bgmSrc = src;
+      return;
+    }
+    /* WebAudio未ロード時: HTMLAudioでイントロ→終了後ループ (わずかに間が空く場合あり) */
+    const el = this.bgm[introKey];
+    if (!el) { this.playBGM(loopKey); return; }
+    const token = {};
+    this.bgmIntroToken = token;
+    const next = () => { if (this.bgmIntroToken === token) { this.bgmIntroToken = null; this.playBGM(loopKey); } };
+    el.loop = false;
+    el.volume = Math.min(1, state.bgmVol);
+    el.currentTime = 0;
+    el.onended = next;
+    el.play().catch(next);
+    this.bgmFallbackEl = el;
+  },
   stopBGM() {
+    this.bgmIntroToken = null;
+    if (this.bgmIntroSrc) { try { this.bgmIntroSrc.stop(); } catch (e) {} this.bgmIntroSrc = null; }
     if (this.bgmSrc) { try { this.bgmSrc.stop(); } catch (e) {} this.bgmSrc = null; }
     if (this.bgmFallbackEl) { this.bgmFallbackEl.pause(); this.bgmFallbackEl.loop = false; this.bgmFallbackEl = null; }
     this.bgmFallbackMult = 1;
@@ -2382,7 +2414,10 @@ function startBonus(type) {
            ensure()のBGM復帰が先に割り込まないようにする) */
         const startLoop = () => {
           state.bbHitPlaying = false;
-          if (state.inBonus && state.bonusType === 'BB') audio.playBGM(bbLoopKey()); // ゴーゴー3はBB_Aから
+          if (state.inBonus && state.bonusType === 'BB') {
+            if (v.intro) audio.playBGMIntro(v.intro, bbLoopKey()); // イントロ付きの曲(クラリネット)
+            else audio.playBGM(bbLoopKey()); // ゴーゴー3はBB_Aから
+          }
           refreshSkipBtn(); // BB系BGM開始と同時にスキップ有効化
           updateUI();
         };
@@ -3757,6 +3792,7 @@ function bindEvents() {
     { g: 'コロブチカver', key: 'BBSP1',       name: 'BB中BGM (コロブチカ)' },
     { g: 'コロブチカver', key: 'BBFINISHSP1', name: 'BB終了 (コロブチカ)' },
     { g: 'クラリネットver', key: 'BBHIT_SP2',   name: 'BB当選 (クラリネットをこわしちゃった)' },
+    { g: 'クラリネットver', key: 'BBSP2_INTRO', name: 'BB中BGM イントロ (クラリネットをこわしちゃった)' },
     { g: 'クラリネットver', key: 'BBSP2',       name: 'BB中BGM (クラリネットをこわしちゃった)' },
     { g: 'クラリネットver', key: 'BBFINISHSP2', name: 'BB終了 (クラリネットをこわしちゃった)' },
     { g: '魔王ver',       key: 'BBHIT_SP3',   name: 'BB当選 (魔王)' },
