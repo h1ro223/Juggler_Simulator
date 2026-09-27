@@ -484,6 +484,7 @@ const state = {
   bonusLog: [],        // 全ボーナス履歴 [{t:'BB'|'RB', g:スタートG数}] 古い順。データリセットで消える
   kaishuYen: 0,        // 回収額(精算で円に変換した合計)
   forceBonus: false,   // 次ゲームでGOGO!CHANCE点灯(1回)
+  lampTapArmed: false, // GOGOランプ5回タップ→このゲームでペカ確定(レバー時に判定)
   stopHeld: false,     // 第3停止ボタンを押し込んだまま(離すまでボーナス突入を保留)
   /* --- プレミア演出 (そのゲーム限り。レバーONで毎回リセット) --- */
   premSilent: false,   // 無音: リール回転音・停止音を鳴らさない
@@ -1356,6 +1357,11 @@ function leverOn(betDelayMs = 1000) {
     autoBetDelay = betDelayMs;
   }
 
+  /* GOGOランプをちょうど5回タップしてからのレバーなら、このゲームでペカ確定(6回以上は無効)
+     判定後は回数をリセット。ボーナス中・点灯中・判別チャレンジ中・目押しTA中は無効 */
+  state.lampTapArmed = lampTapCount === 5 && !state.inBonus && !state.lampLit &&
+    !(state.challenge && state.challenge.active) && !taActive();
+  lampTapCount = 0;
   state.gamePhase = 'prelever';
   updateUI();
   if (autoBetDelay > 0) setTimeout(fireLever, autoBetDelay);
@@ -1460,6 +1466,8 @@ function startGame() {
     const hadFlag = !!state.bonusFlag; // 楽曲判定用: このゲームで新規当選したか
     const taMode = taActive(); // 目押しTA中は抽選・隠しコマンドを行わない
     if (!taMode) consumeSecretCommand(); // 隠しコマンド入力があればここでforceBonusに変換
+    if (state.lampTapArmed && !taMode && !state.forceBonus) state.forceBonus = true; // GOGOランプ5回タップ
+    state.lampTapArmed = false;
     /* 「ペカ確定」(メニュー/隠しコマンド): 確率無視でボーナスフラグ確定 */
     if (state.forceBonus && !taMode) {
       const rare = state.forceBonus === 'rare';
@@ -3126,6 +3134,8 @@ function skipBonus() {
   updateUI();
 }
 
+/* GOGOランプのタップ回数 (レバーを引くたびにリセット) */
+let lampTapCount = 0;
 function refreshPekaBtn() {
   /* 目押しTA中はGOGO確定ボタンを使わせない */
   if (taActive()) {
@@ -3358,6 +3368,8 @@ function bindEvents() {
     message(state.easyLever ? '簡単レバーモード ON (BET0でもレバーでMAXBET)' : '簡単レバーモード OFF (BETしないとレバーを引けません)');
   });
   el.dpAuto.addEventListener('click', () => { audio.ensure(); setAutoMode(!state.autoMode); });
+  /* GOGOランプ5回タップ → 次のレバーでペカ確定 (隠し操作のため表示・音なし) */
+  el.gogoLamp.addEventListener('pointerdown', () => { lampTapCount++; });
   el.btnForcePeka.addEventListener('click', () => {
     state.forceBonus = !state.forceBonus;
     refreshPekaBtn();
