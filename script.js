@@ -541,6 +541,7 @@ const BGM_FILES = {
   BBHIT_SP2: './BGM/BBhit_SP2.mp3', BBSP2: './BGM/BBSP2.mp3', BBFINISHSP2: './BGM/BBFinishSP2.mp3', // クラリネットをこわしちゃった
   BBSP2_INTRO: './BGM/BBSP2_Intro.mp3', // クラリネット: hit終了後→このイントロ→BBSP2ループ (空白0)
   BBHIT_SP3: './BGM/BBhit_SP3.mp3', BBSP3: './BGM/BBSP3.mp3', BBFINISHSP3: './BGM/BBFinishSP3.mp3', // 魔王
+  BBSP3_INTRO: './BGM/BBSP3_Intro.mp3', // 魔王: hit終了後→このイントロ→BBSP3ループ (空白0)
   BBFINISHX2: './BGM/BBFinishX_2nd.mp3',  // セカンドゾーン終了
   FUNKY: './BGM/777.mp3'                  // シークレット曲 (777ver完走で解放)
 };
@@ -561,7 +562,7 @@ const BB_VERS = {
   GSP_B:  { hit: 'BBHITSP_B', loop: 'BBSP_B', fin: 'BBFINISHSP_B', grape: 'GRAPE14SP_B' }, // 軍艦マーチ(女性)
   GZ1:    { hit: 'BBHIT_SP1', loop: 'BBSP1',  fin: 'BBFINISHSP1',  grape: 'GRAPE14' },     // コロブチカ
   GZ2:    { hit: 'BBHIT_SP2', loop: 'BBSP2',  fin: 'BBFINISHSP2',  grape: 'GRAPE14', intro: 'BBSP2_INTRO' }, // クラリネットをこわしちゃった
-  GZ3:    { hit: 'BBHIT_SP3', loop: 'BBSP3',  fin: 'BBFINISHSP3',  grape: 'GRAPE14' }      // 魔王
+  GZ3:    { hit: 'BBHIT_SP3', loop: 'BBSP3',  fin: 'BBFINISHSP3',  grape: 'GRAPE14', intro: 'BBSP3_INTRO' } // 魔王
 };
 
 /* BB当選時のG数(前回ボーナス終了から)で楽曲バージョンを決定
@@ -603,7 +604,7 @@ const ASSET_OWNER = {};
  'BBHITX', 'BBFINISHX', 'GOGOX', 'BBX1', 'BBX2', 'BBHITX2', 'BBX2ND', 'BBFINISHX2', 'FUNKY',
  'LEVERSP', 'GRAPE14SP', 'GRAPE14X', 'REPLAY1', 'REPLAY2', 'REPLAY3', 'GOGO'].forEach(k => { ASSET_OWNER[k] = 'aime'; });
 ['BB_A', 'BB_B', 'BBHITSP_A', 'BBSP_A', 'BBFINISHSP_A', 'BBHITSP_B', 'BBSP_B', 'BBFINISHSP_B',
- 'BBHIT_SP1', 'BBSP1', 'BBFINISHSP1', 'BBHIT_SP2', 'BBSP2', 'BBFINISHSP2', 'BBSP2_INTRO', 'BBHIT_SP3', 'BBSP3', 'BBFINISHSP3',
+ 'BBHIT_SP1', 'BBSP1', 'BBFINISHSP1', 'BBHIT_SP2', 'BBSP2', 'BBFINISHSP2', 'BBSP2_INTRO', 'BBHIT_SP3', 'BBSP3', 'BBFINISHSP3', 'BBSP3_INTRO',
  'GRAPE14SP_A', 'GRAPE14SP_B', 'LEVERSP_A', 'LEVERSP_B', 'REPLAY'].forEach(k => { ASSET_OWNER[k] = 'gogo'; });
 function assetUsable(k) { return !ASSET_OWNER[k] || ASSET_OWNER[k] === MACHINE_ID; }
 
@@ -1402,7 +1403,8 @@ function doLeverAction() {
   if (key.startsWith('LEVERSP')) {
     /* 軍艦マーチverの節目: LeverSP(ゴーゴー3はLeverSP_A/B)を主役にしつつ、通常Leverも音量を絞って同時再生 */
     audio.playSE(key);
-    if (key === 'LEVERSP') audio.playSE('LEVER', true, LEVER_SUB_VOL); // 重ね再生はアイムのみ(ゴーゴー3のLeverSP_A/Bは完全差し替え)
+    /* 通常Leverを小さく重ねる: アイムのLeverSP / ゴーゴー3のLeverSP_A(一時的)。LeverSP_Bは完全差し替え */
+    if (key === 'LEVERSP' || key === 'LEVERSP_A') audio.playSE('LEVER', true, LEVER_SUB_VOL);
   } else {
     audio.playSE('LEVER');
   }
@@ -2415,7 +2417,7 @@ function startBonus(type) {
         const startLoop = () => {
           state.bbHitPlaying = false;
           if (state.inBonus && state.bonusType === 'BB') {
-            if (v.intro) audio.playBGMIntro(v.intro, bbLoopKey()); // イントロ付きの曲(クラリネット)
+            if (v.intro) audio.playBGMIntro(v.intro, bbLoopKey()); // イントロ付きの曲(クラリネット・魔王)
             else audio.playBGM(bbLoopKey()); // ゴーゴー3はBB_Aから
           }
           refreshSkipBtn(); // BB系BGM開始と同時にスキップ有効化
@@ -3796,6 +3798,7 @@ function bindEvents() {
     { g: 'クラリネットver', key: 'BBSP2',       name: 'BB中BGM (クラリネットをこわしちゃった)' },
     { g: 'クラリネットver', key: 'BBFINISHSP2', name: 'BB終了 (クラリネットをこわしちゃった)' },
     { g: '魔王ver',       key: 'BBHIT_SP3',   name: 'BB当選 (魔王)' },
+    { g: '魔王ver',       key: 'BBSP3_INTRO', name: 'BB中BGM イントロ (魔王)' },
     { g: '魔王ver',       key: 'BBSP3',       name: 'BB中BGM (魔王)' },
     { g: '魔王ver',       key: 'BBFINISHSP3', name: 'BB終了 (魔王)' },
     { g: 'REGULAR BONUS', key: 'RB',       name: 'RB中BGM' }
