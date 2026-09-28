@@ -264,7 +264,7 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 }
 
 /* BETランプ */
-#betLamps { display: flex; flex-direction: column; justify-content: space-around; padding: 4px 2px; }
+#betLamps { display: flex; flex-direction: column; justify-content: center; gap: 18px; padding: 4px 2px; } /* 3・2・1の間隔は gap で調整 */
 .bet-lamp {
   width: 20px; height: 20px; border-radius: 50%;
   background: #3a2a08; color: #6b5a20; border: 1px solid #221800;
