@@ -860,12 +860,24 @@ function startWinBlink() {
     const p = Math.round(r.pos);
     const ep = p < 1 ? p + KOMA : p; // render()と同じ基準(窓の上段 = 帯のep番目)
     const cell = r.strip.children[ep + winBlinkRows[i]];
-    if (cell) { cell.classList.add('win-blink'); winBlinkCells.push(cell); }
+    if (!cell) return;
+    /* 「暗い図柄」を重ねて出したり消したりする (実機のように7・BARの色だけが点滅) */
+    const key = cell.querySelector('img') ? cell.querySelector('img').dataset.img : '';
+    if (SYM_DIM[key]) {
+      const ov = document.createElement('img');
+      ov.className = 'dim-ov';
+      ov.src = SYM_DIM[key];
+      ov.alt = '';
+      ov.draggable = false;
+      cell.appendChild(ov);
+    }
+    cell.classList.add('win-blink');
+    winBlinkCells.push(cell);
   });
   winBlinkRows = null;
 }
 function stopWinBlink() {
-  winBlinkCells.forEach(c => c.classList.remove('win-blink'));
+  winBlinkCells.forEach(c => { c.classList.remove('win-blink'); c.querySelectorAll('.dim-ov').forEach(o => o.remove()); });
   winBlinkCells = [];
 }
 function windowCol(reelIdx, pos) {
@@ -1206,6 +1218,10 @@ const reels = [];
    セル比率=画像比率のため上下の余白なしでピッタリ収まる。
    512x188(1280:470と同比率)に縮小してGPU負荷も削減 */
 const SYM_OPT = {}; // 最適化済み画像キャッシュ (後から生成するリールにも適用)
+/* 777/77BAR点滅用の「暗い7・暗いBAR」: 色のついた所(赤・黄)だけ暗くし、白・黒・背景はそのまま */
+const SYM_DIM = {};
+const WIN_DIM_K = 0.45;          // 暗さ (0=変化なし / 大きいほど暗い)
+const WIN_DIM_KEYS = ['7', '6']; // 7 と BAR
 function optimizeSymbolImages() {
   const W = 512, H = 188; // 1280:470 と同比率 (512*470/1280=188)
   const ALL_IMG = Object.assign({}, SYM_IMG, REEL_IMG_ALT); // 見た目差し替え用画像も最適化
@@ -1229,6 +1245,16 @@ function optimizeSymbolImages() {
         }
         c.putImageData(id, 0, 0);
         const url = cv.toDataURL('image/jpeg', 0.9); // 白背景・非透過なのでJPEGでOK
+        if (WIN_DIM_KEYS.includes(sym)) {
+          for (let i = 0; i < d.length; i += 4) {
+            const r = d[i], g = d[i + 1], b = d[i + 2];
+            const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+            const f = 1 - WIN_DIM_K * (mx > 0 ? (mx - mn) / mx : 0); // 彩度が高いほど暗く
+            d[i] = r * f; d[i + 1] = g * f; d[i + 2] = b * f;
+          }
+          c.putImageData(id, 0, 0);
+          SYM_DIM[sym] = cv.toDataURL('image/jpeg', 0.9);
+        }
         SYM_OPT[sym] = url;
         document.querySelectorAll('img[data-img="' + sym + '"]').forEach(im => { im.src = url; });
       } catch (e) { /* file://直開き等でcanvasが使えない場合は原寸のまま表示 */ }

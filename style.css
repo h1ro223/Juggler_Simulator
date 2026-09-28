@@ -291,11 +291,15 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
   height: var(--windowH, 180px);
 }
 .strip { position: absolute; top: 0; left: 0; width: 100%; will-change: transform; }
-.cell { width: 100%; height: var(--cellH, 60px); margin-bottom: var(--cellGap, 10px); background: #fff; }
+.cell { position: relative; width: 100%; height: var(--cellH, 60px); margin-bottom: var(--cellGap, 10px); background: #fff; }
 .cell img { width: 100%; height: 100%; object-fit: fill; display: block; pointer-events: none; }
-/* 777 / 77BAR が揃ったマスの点滅: 図柄だけが消えて白い背景が残る (0.2秒ごと)。速さは .4s で調整 */
-.cell.win-blink img { animation: winBlink .4s steps(1) infinite; }
-@keyframes winBlink { 0% { opacity: 1; } 50% { opacity: 0; } }
+/* 777 / 77BAR が揃ったマスの点滅: 7・BARの色だけが 明るい⇔暗い (0.2秒ごと)。速さは .4s で調整
+   暗さは script.js の WIN_DIM_K で調整 */
+.cell .dim-ov {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none;
+  animation: winBlink .4s steps(1) infinite;
+}
+@keyframes winBlink { 0% { opacity: 0; } 50% { opacity: 1; } }
 /* リール回転中のぼかしは目押し重視のため廃止 */
 .reel .shade {
   position: absolute; inset: 0; pointer-events: none;
