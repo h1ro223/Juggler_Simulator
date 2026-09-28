@@ -242,6 +242,12 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 .w-unit { font-size: 8px; color: #9aa; }
 
 /* ================= リールセクション ================= */
+/* ===== リール周りの位置調整 (ここの数字だけ変えればOK) =====
+   --reel-down : リール・3/2/1ランプ・Start等をまとめて下げる量
+   --rw-pad-y  : 紺色の枠の内側、リールの上下に足す余白 (枠が縦に伸びる)
+   --gogo-w    : GOGO!CHANCEの横幅 (正方形)
+   --under-gap : リールと下の段(GOGO!CHANCE・CREDIT等)の間隔 */
+#reelSection { --reel-down: 6px; --rw-pad-y: 8px; --gogo-w: 64px; --under-gap: 6px; }
 #reelSection {
   background: var(--reel-panel);
   border: 3px solid var(--reel-border);
@@ -253,6 +259,7 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
   display: flex; align-items: stretch; gap: 5px;
   background: none; /* 3リールの枠の外側はフレームの色をそのまま見せる */
   padding: 2px;
+  margin-top: var(--reel-down);
   position: relative; /* ツノッチの配置基準 */
 }
 
@@ -273,7 +280,7 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 #reelWindow {
   flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;
   background: #050507;               /* リールとリールの間は黒 */
-  padding: 4px;
+  padding: calc(4px + var(--rw-pad-y)) 4px;
   border: 3px solid #1c2a78;         /* 実機風の紺枠 */
   border-radius: 6px;
   box-shadow: 0 0 0 1px #c9a23a, inset 0 0 0 1px #c9a23a, inset 0 3px 10px rgba(0,0,0,.9); /* 細い金線 */
@@ -337,9 +344,9 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 
 /* --- ランプ + 7セグ --- */
 #underReel {
-  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px; margin-top: 6px;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px; margin-top: var(--under-gap);
 }
-#gogoLamp { grid-column: 1; justify-self: start; width: 52px; flex-shrink: 0; position: relative; }
+#gogoLamp { grid-column: 1; justify-self: start; width: var(--gogo-w); flex-shrink: 0; position: relative; }
 #segArea { grid-column: 2; }
 /* 強ガコッ!: 告知音が大きいプレミア。ランプが一瞬強く光る */
 #gogoLamp.strong-gako { animation: strongGako .9s ease-out; }
