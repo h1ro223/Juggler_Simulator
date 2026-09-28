@@ -3071,6 +3071,7 @@ function resetAll() {
   audio.stopBGM();
   audio.stopSELoop();
   unlightLamp();
+  tsunotti('off'); // プレミアBB中のリセットでツノッチが残る不具合の修正
   el.topBanner.classList.remove('bonus-flash', 'x-rainbow');
   clearBonusBlink();
   xClearTimers();
@@ -3280,14 +3281,14 @@ function bindEvents() {
   const ptBig = document.querySelector('#payTable .pt-big-note'); // 小役一覧のBB獲得枚数も機種別に
   if (ptBig) ptBig.textContent = `最大+${BB_SKIP_PAY}枚`;
   /* HTML内の画像(GOGOランプ・小役一覧・リール配列)を選択中の機種フォルダに読み替え */
-  /* [ゴーゴー3] ツノッチをバナー左上に配置 (普段は非表示) */
+  /* [ゴーゴー3] ツノッチをリール左上の角に配置 (普段は非表示) */
   if (MACHINE_ID === 'gogo') {
     const tsu = document.createElement('img');
     tsu.id = 'tsunotti';
     tsu.src = MACHINE.dirs.sp + 'Tsunotti.png';
     tsu.alt = '';
     tsu.draggable = false;
-    $('topBanner').appendChild(tsu);
+    $('reelFrame').appendChild(tsu); // BET3ランプの上 (リール左上の角)
   }
   document.querySelectorAll('img[src]').forEach(im => {
     const cur = im.getAttribute('src'), next = mPath(cur);

@@ -9,6 +9,8 @@
   --panel-red: linear-gradient(160deg, #a80f1e 0%, #d41b2c 30%, #8c0a18 70%, #b3121f 100%);
   --panel-red-deep: #6d0812;
   --panel-border: #3a0509; /* フレームの縁 */
+  --reel-panel: var(--panel-red);    /* リール側フレーム (既定はバナーと同じ) */
+  --reel-border: var(--panel-border);
   --seg-pink: #ff5578; /* 気持ち赤み寄りに調整 (旧: #ff5f9e) */
   --seg-green: #35ff6e;
   --seg-red: #ff3b3b;
@@ -19,6 +21,9 @@
 /* ===== 機種別カラー (html[data-machine]) =====
    ゴーゴージャグラー3: フレームをピンクに */
 html[data-machine="gogo"] {
+  /* リール側フレームは #741F29 基調 (周りは少し暗め)。バナーはピンクのまま */
+  --reel-panel: linear-gradient(160deg, #5c1720 0%, #741F29 30%, #4c131a 70%, #641b24 100%);
+  --reel-border: #2a080c;
   --panel-red: linear-gradient(160deg, #c41e66 0%, #ee3f8c 30%, #a8165a 70%, #d62a77 100%);
   --panel-red-deep: #6a0a36;
   --panel-border: #3e0520;
@@ -179,8 +184,8 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
   font-size: 14px; font-weight: 900; color: #fff; letter-spacing: 10px;
   text-shadow: 0 0 8px #ff8, 1px 1px 0 #600;
 }
-/* [ゴーゴー3] ツノッチ (バナー左上のプレミア)。大きさ・位置は --tsu-w / --tsu-x / --tsu-y で調整 */
-#topBanner { --tsu-w: 26px; --tsu-x: 6px; --tsu-y: 5px; }
+/* [ゴーゴー3] ツノッチ (BET3ランプの上=リール左上の角のプレミア)。大きさ・位置は --tsu-w / --tsu-x / --tsu-y で調整 */
+#reelFrame { --tsu-w: 26px; --tsu-x: 1px; --tsu-y: -16px; }
 #tsunotti {
   position: absolute; left: var(--tsu-x); top: var(--tsu-y); width: var(--tsu-w); height: auto;
   opacity: 0; pointer-events: none; z-index: 2; -webkit-user-select: none; user-select: none;
@@ -241,18 +246,18 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 
 /* ================= リールセクション ================= */
 #reelSection {
-  background: var(--panel-red);
-  border: 3px solid var(--panel-border);
+  background: var(--reel-panel);
+  border: 3px solid var(--reel-border);
   border-radius: 12px;
   padding: 8px 6px 6px;
   box-shadow: inset 0 0 26px rgba(0,0,0,.55);
 }
 #reelFrame {
   display: flex; align-items: stretch; gap: 4px;
-  background: linear-gradient(180deg, #1c1c22, #08080a);
+  background: none; /* 黒背景なし: フレームの色をそのまま見せる (リール個別の枠線は残す) */
   border-radius: 10px; padding: 8px 4px;
-  border: 2px solid #000;
-  box-shadow: inset 0 3px 10px rgba(0,0,0,.9);
+  margin-top: 10px; /* リール・BETランプ・状態ランプをまとめて10px下げる */
+  position: relative; /* ツノッチの配置基準 */
 }
 
 /* BETランプ */
@@ -330,8 +335,8 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 }
 
 /* --- ランプ + 7セグ --- */
-#underReel { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-#gogoLamp { width: 25%; max-width: 100px; flex-shrink: 0; position: relative; }
+#underReel { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; }
+#gogoLamp { width: 20%; max-width: 78px; flex-shrink: 0; position: relative; }
 /* 強ガコッ!: 告知音が大きいプレミア。ランプが一瞬強く光る */
 #gogoLamp.strong-gako { animation: strongGako .9s ease-out; }
 @keyframes strongGako {
@@ -360,19 +365,20 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
   0%,100% { filter: drop-shadow(0 0 4px rgba(120,120,255,.9)) brightness(1); }
   50%     { filter: drop-shadow(0 0 16px rgba(160,120,255,1)) brightness(1.25); }
 }
-#segArea { flex: 1; display: flex; gap: 5px; }
+#segArea { flex: 0 1 auto; display: flex; gap: 5px; }
 .seg-box {
-  flex: 1; background: #000; border: 2px solid #2c0509; border-radius: 6px;
-  padding: 4px 2px 2px; text-align: center;
+  flex: 0 1 auto; width: clamp(52px, 17vw, 66px);
+  background: #000; border: 2px solid #2c0509; border-radius: 6px;
+  padding: 3px 2px 2px; text-align: center;
   box-shadow: inset 0 0 10px rgba(0,0,0,.9);
 }
 .seg-value {
   display: block; font-family: "DSEG7Modern", "Courier New", monospace; font-weight: bold;
-  font-size: 19px; line-height: 22px; color: var(--seg-pink);
+  font-size: 16px; line-height: 19px; color: var(--seg-pink);
   text-shadow: 0 0 8px rgba(255,85,120,.9);
-  min-height: 22px;
+  min-height: 19px;
 }
-.seg-label { display: block; font-size: 8px; font-weight: bold; color: var(--gold); letter-spacing: 1px; margin-top: 2px; }
+.seg-label { display: block; font-size: 7px; font-weight: bold; color: var(--gold); letter-spacing: .5px; margin-top: 2px; white-space: nowrap; }
 
 /* --- メッセージバー --- */
 #msgBar {
