@@ -179,6 +179,44 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
   font-size: 14px; font-weight: 900; color: #fff; letter-spacing: 10px;
   text-shadow: 0 0 8px #ff8, 1px 1px 0 #600;
 }
+/* [ゴーゴー3] ツノッチ (バナー左上のプレミア)。大きさ・位置は --tsu-w / --tsu-x / --tsu-y で調整 */
+#topBanner { --tsu-w: 26px; --tsu-x: 6px; --tsu-y: 5px; }
+#tsunotti {
+  position: absolute; left: var(--tsu-x); top: var(--tsu-y); width: var(--tsu-w); height: auto;
+  opacity: 0; pointer-events: none; z-index: 2; -webkit-user-select: none; user-select: none;
+}
+/* 当選音中 (1回だけ・最後は非表示で止まる) */
+#tsunotti.tsu-hit-a  { animation: tsuHitA 5s linear forwards; }
+#tsunotti.tsu-hit-b  { animation: tsuHitB 4.5s linear forwards; }
+#tsunotti.tsu-hit-z1 { animation: tsuHitZ1 5.5s linear forwards; }
+#tsunotti.tsu-hit-z2 { animation: tsuHitZ2 6.75s linear forwards; }
+#tsunotti.tsu-hit-z3 { animation: tsuHitZ3 6.5s linear forwards; }
+/* BB中 (終了音まで繰り返し) */
+#tsunotti.tsu-fade08   { animation: tsuFade .8s linear infinite alternate; }
+#tsunotti.tsu-fade075  { animation: tsuFade .75s linear infinite alternate; }
+#tsunotti.tsu-blink025 { animation: tsuBlink .5s linear infinite; }
+/* 軍艦マーチ男性: 0〜3.5秒表示 → 5秒までフェードアウト */
+@keyframes tsuHitA { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+/* 軍艦マーチ女性: 0〜3.5秒表示 → 4.5秒までフェードアウト */
+@keyframes tsuHitB { 0%, 77.778% { opacity: 1; } 100% { opacity: 0; } }
+/* コロブチカ: 0〜5秒表示 → 5.5秒までフェードアウト */
+@keyframes tsuHitZ1 { 0%, 90.909% { opacity: 1; } 100% { opacity: 0; } }
+/* クラリネット: 0.4秒ずつ イン→アウト→イン→アウト / 1.6〜6.25秒表示 / 6.75秒までフェードアウト */
+@keyframes tsuHitZ2 {
+  0% { opacity: 0; } 5.926% { opacity: 1; } 11.852% { opacity: 0; } 17.778% { opacity: 1; }
+  23.703% { opacity: 0; } 23.704% { opacity: 1; } 92.593% { opacity: 1; } 100% { opacity: 0; }
+}
+/* 魔王: 0.25秒おきに表示/非表示×4セット / 2.75〜3.25秒フェードイン / 5.5秒まで表示 / 6.5秒までフェードアウト */
+@keyframes tsuHitZ3 {
+  0%, 3.845% { opacity: 1; } 3.846%, 7.691% { opacity: 0; }
+  7.692%, 11.537% { opacity: 1; } 11.538%, 15.384% { opacity: 0; }
+  15.385%, 19.230% { opacity: 1; } 19.231%, 23.076% { opacity: 0; }
+  23.077%, 26.922% { opacity: 1; } 26.923%, 42.308% { opacity: 0; }
+  50%, 84.615% { opacity: 1; } 100% { opacity: 0; }
+}
+@keyframes tsuFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tsuBlink { 0%, 49.99% { opacity: 1; } 50%, 100% { opacity: 0; } }
+
 #topBanner.bonus-flash { animation: bannerFlash .35s steps(2) infinite; }
 @keyframes bannerFlash {
   0% { filter: brightness(1); } 50% { filter: brightness(1.9) saturate(1.5); } 100% { filter: brightness(1); }

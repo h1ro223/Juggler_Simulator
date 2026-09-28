@@ -25,7 +25,7 @@ const MACHINES = {
       { bb: 1/259.0, rb: 1/255.0, grape: 1/6.02 },
       { bb: 1/255.0, rb: 1/255.0, grape: 1/5.85 }
     ],
-    dirs: { reel: './ImJ/Reel/', gogo: './ImJ/GOGO/', se: './ImJ/SE/', bgm: './ImJ/BGM/', guide: './ImJ/Guide/' },
+    dirs: { reel: './ImJ/Reel/', gogo: './ImJ/GOGO/', se: './ImJ/SE/', bgm: './ImJ/BGM/', guide: './ImJ/Guide/', sp: './ImJ/SP/' },
     saveSuffix: '',
     bbLimit: 280,        // BB: この枚数を超える払い出しで終了 (COUNT294)
     bbSkipPay: 252,      // BB: 実際の獲得枚数
@@ -47,7 +47,7 @@ const MACHINES = {
       { bb: 1/247.3, rb: 1/247.3, grape: 1/6.02 },
       { bb: 1/234.9, rb: 1/234.9, grape: 1/5.85 }
     ],
-    dirs: { reel: './GoJ/Reel/', gogo: './GoJ/GOGO/', se: './GoJ/SE/', bgm: './GoJ/BGM/', guide: './GoJ/Guide/' },
+    dirs: { reel: './GoJ/Reel/', gogo: './GoJ/GOGO/', se: './GoJ/SE/', bgm: './GoJ/BGM/', guide: './GoJ/Guide/', sp: './GoJ/SP/' },
     saveSuffix: '_gogo',
     bbLimit: 266,        // BB: COUNT280で終了 (アイムより-14)
     bbSkipPay: 240,      // BB: 実際の獲得枚数 (アイムより-12)
@@ -67,8 +67,8 @@ const MACHINE = MACHINES[MACHINE_ID];
 document.documentElement.dataset.machine = MACHINE_ID; // CSSのフレーム色切り替え用
 /* 素材パスを選択中の機種のフォルダに読み替える ('./SE/Bet.mp3' → dirs.se + 'Bet.mp3')
    './Reel/x.png' のような共通表記、または './ImJ/Reel/x.png' のような機種フォルダ表記のどちらでも読み替える */
-const DIR_MAP = { Reel: 'reel', GOGO: 'gogo', SE: 'se', BGM: 'bgm', Guide: 'guide' };
-const DIR_RE = /^\.\/(?:(?:ImJ|GoJ)\/)?(Reel|GOGO|SE|BGM|Guide)\//;
+const DIR_MAP = { Reel: 'reel', GOGO: 'gogo', SE: 'se', BGM: 'bgm', Guide: 'guide', SP: 'sp' };
+const DIR_RE = /^\.\/(?:(?:ImJ|GoJ)\/)?(Reel|GOGO|SE|BGM|Guide|SP)\//;
 function mPath(p) {
   if (typeof p !== 'string') return p;
   const m = p.match(DIR_RE);
@@ -644,6 +644,7 @@ const audio = {
     // BBhit系mp3の再生中は割り込まない(playBGMOnceはbgmSrcに紐付かないため誤判定するバグの防止)
     if (state.inBonus && state.bgmOn && !state.bbHitPlaying && !this.bgmSrc && !this.bgmFallbackEl) {
       this.playBGM(state.bonusType === 'BB' ? bbLoopKey() : 'RB');
+      tsunotti('main'); // リロード復帰時はBB中BGMの動きから
     }
   },
   applyVolumes() {
@@ -2360,6 +2361,26 @@ function xEnterSecond(payoutSndMs) {
   }, Math.max(0, payoutSndMs));
 }
 
+/* [ゴーゴー3] ツノッチ(バナー左上のプレミア): 楽曲verごとの動き (CSSアニメーションのクラス名)
+   hit = BB当選音の再生開始から / main = イントロ(またはBB中BGM)の再生開始からBB終了音まで */
+const TSU_ANIM = {
+  GSP_A: { hit: 'tsu-hit-a',  main: 'tsu-fade08' },  // 軍艦マーチ(男性)
+  GSP_B: { hit: 'tsu-hit-b',  main: 'tsu-fade08' },  // 軍艦マーチ(女性)
+  GZ1:   { hit: 'tsu-hit-z1', main: 'tsu-fade075' }, // コロブチカ
+  GZ2:   { hit: 'tsu-hit-z2', main: 'tsu-fade08' },  // クラリネット
+  GZ3:   { hit: 'tsu-hit-z3', main: 'tsu-blink025' } // 魔王
+};
+/* phase: 'hit' / 'main' / 'off' (通常ver・RB・終了音中は非表示) */
+function tsunotti(phase) {
+  const img = document.getElementById('tsunotti');
+  if (!img) return;
+  img.className = '';
+  const t = TSU_ANIM[state.bonusVer];
+  if (phase === 'off' || !t || !state.inBonus || state.bonusType !== 'BB') return;
+  void img.offsetWidth; // アニメーションを頭から再スタート
+  img.className = t[phase];
+}
+
 /* ゴーゴー3のBB中BGM切替COUNT: 0〜56=A / 56〜112=B / 112〜154=A / 154〜196=B / 196〜238=A / 238〜280=B */
 const GOGO_BB_SWITCH = [56, 112, 154, 196, 238];
 /* ボーナス中BGMの再開キー (リロード復帰・BGMトグル用。777verは進行段階に応じた曲) */
@@ -2419,12 +2440,14 @@ function startBonus(type) {
     } else {
       const hit = v.hit || (Math.random() < 0.5 ? 'BBHIT1' : 'BBHIT2');
       state.bbHitPlaying = true; /* hit再生中はensure()のBGM復帰を割り込ませない */
+      tsunotti('hit'); // 当選音の再生開始と同時
       audio.playBGMOnce(hit, () => {
         /* hit終了→BB曲開始 (ゴーゴー3は1秒待ってからBB_A。待ち中もbbHitPlayingを立てたままにして
            ensure()のBGM復帰が先に割り込まないようにする) */
         const startLoop = () => {
           state.bbHitPlaying = false;
           if (state.inBonus && state.bonusType === 'BB') {
+            tsunotti('main'); // イントロ(またはBB中BGM)の再生開始と同時
             if (v.intro) audio.playBGMIntro(v.intro, bbLoopKey()); // イントロ付きの曲(クラリネット・魔王)
             else audio.playBGM(bbLoopKey()); // ゴーゴー3はBB_Aから
           }
@@ -2503,6 +2526,7 @@ function endBonus(payoutSndMs = 0) {
           xSchedule(() => { xSetRainbow(false); el.gogoLamp.classList.remove('x-fade'); }, 2600);
         }, 3100 + 100); /* +100msはFinish再生開始までのディレイ分 */
       }
+      tsunotti('off'); // BB終了音の間は非表示
       setTimeout(() => {
         audio.playBGMOnce(finKey, () => {
           setBonusBlink('BB', false); /* BBFinish再生終了と同時に点滅停止→常時点灯 */
@@ -3256,6 +3280,15 @@ function bindEvents() {
   const ptBig = document.querySelector('#payTable .pt-big-note'); // 小役一覧のBB獲得枚数も機種別に
   if (ptBig) ptBig.textContent = `最大+${BB_SKIP_PAY}枚`;
   /* HTML内の画像(GOGOランプ・小役一覧・リール配列)を選択中の機種フォルダに読み替え */
+  /* [ゴーゴー3] ツノッチをバナー左上に配置 (普段は非表示) */
+  if (MACHINE_ID === 'gogo') {
+    const tsu = document.createElement('img');
+    tsu.id = 'tsunotti';
+    tsu.src = MACHINE.dirs.sp + 'Tsunotti.png';
+    tsu.alt = '';
+    tsu.draggable = false;
+    $('topBanner').appendChild(tsu);
+  }
   document.querySelectorAll('img[src]').forEach(im => {
     const cur = im.getAttribute('src'), next = mPath(cur);
     if (next !== cur) im.src = next;
