@@ -56,7 +56,7 @@ const MACHINES = {
     bbHitWait: 500,       // BBhit1/2終了→BB_A開始までの待ち(ms) ※一時的な設定
     pekaFirst: 0,        // 即ペカはプレミア(即点灯)のみ。通常は必ず後ペカ
     lampFade: true,      // 後ペカは0.25秒かけてふわっと点灯
-    rainbow: false       // レインボー点灯なし(GOGOCHANCE_2は使わない)
+    rainbow: false       // レインボー点灯なし(GOGO2は使わない)
   }
 };
 const MACHINE_ID = (() => {
@@ -1664,7 +1664,7 @@ function lightLamp(fade = false) {
   el.gogoLamp.classList.add('lit');
   const rb = !!(state.rareLamp && MACHINE.rainbow); // 中段チェリー時はレインボー(ゴーゴー3は無し)
   el.gogoLamp.classList.toggle('rainbow', rb);
-  $('gogoImgRainbow').hidden = !rb; // CHANCE文字レインボー画像(GOGOCHANCE_2.png)
+  $('gogoImgRainbow').hidden = !rb; // CHANCE文字レインボー画像(GOGO2.png)
   /* 強ガコッ!: 告知音をいつもより大きく鳴らすプレミア */
   if (MACHINE.gogoSnd) audio.playSE('GOGO', true, state.premStrongGogo ? STRONG_GOGO_VOL : 1); // ゴーゴー3はペカ音なし
   if (state.premStrongGogo) {

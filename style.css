@@ -362,7 +362,7 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 /* ゴーゴー3の後ペカ: 0.25秒かけてふわっと点灯 → その後は通常の明滅 */
 #gogoLamp.lit.fade-in #gogoImgOn { animation: lampFadeIn .25s ease-out both, gogoGlow 1s ease-in-out .25s infinite; }
 @keyframes lampFadeIn { from { opacity: 0; } to { opacity: 1; } }
-#gogoImgRainbow { position: absolute; inset: 0; z-index: 2; } /* CHANCE文字のみの透過画像(GOGOCHANCE_1の上に重ねる) */
+#gogoImgRainbow { position: absolute; inset: 0; z-index: 2; } /* CHANCE文字のみの透過画像(GOGO1の上に重ねる) */
 /* 白文字を着色してから色相を回す(sepia→saturateで白に色を乗せる方式) */
 #gogoLamp.lit.rainbow #gogoImgRainbow {
   animation: chanceRainbow 1.4s linear infinite;
