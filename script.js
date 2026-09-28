@@ -1218,9 +1218,16 @@ function optimizeSymbolImages() {
         const cv = document.createElement('canvas');
         cv.width = W; cv.height = H;
         const c = cv.getContext('2d');
-        c.fillStyle = '#f7f7f7'; // リール背景色に合わせる
+        c.fillStyle = '#ffffff'; // リール背景(白)に合わせる
         c.fillRect(0, 0, W, H);
         c.drawImage(src, 0, (H - h) / 2, W, h); // 横幅フィット・縦中央
+        /* 元画像の薄い灰色の背景(#f7f7f7付近)を白に置き換える */
+        const id = c.getImageData(0, 0, W, H), d = id.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const r = d[i], g = d[i + 1], b = d[i + 2];
+          if (r >= 238 && g >= 238 && b >= 238 && Math.max(r, g, b) - Math.min(r, g, b) <= 6) { d[i] = d[i + 1] = d[i + 2] = 255; }
+        }
+        c.putImageData(id, 0, 0);
         const url = cv.toDataURL('image/jpeg', 0.9); // 白背景・非透過なのでJPEGでOK
         SYM_OPT[sym] = url;
         document.querySelectorAll('img[data-img="' + sym + '"]').forEach(im => { im.src = url; });
