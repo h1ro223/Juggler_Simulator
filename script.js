@@ -849,17 +849,32 @@ const el = {
 const mod = (n, m) => ((n % m) + m) % m;
 const modK = n => mod(n, KOMA);
 
-/* ボーナス図柄(777 / 77BAR)が揃ったラインの3マスを点滅させる (実機のバックライト点滅)
-   開始: ボタンを離してボーナスが始まる瞬間 / 終了: 次のレバーON */
-let winBlinkRows = null;   // 揃ったラインの各リールの行 (LINESの1本)
+/* 揃った図柄のマスを点滅させる (実機のバックライト点滅)
+   対象: 777 / 77BAR / ブドウ・ベル・ピエロ揃い / 左チェリー (リプレイは点滅しない)
+   開始: 揃った瞬間 / 終了: MAXBET・1BET (保険でレバーON) */
+let winBlinkSpec = null;   // 点滅させるマス [[リール番号, 行], ...]
 let winBlinkCells = [];
+const BLINK_LINE_ROLES = ['BB', 'RB', 'GRAPE', 'BELL', 'CLOWN'];
+/* 成立役から点滅させるマスを集める (チェリーは左リールの1マスだけ) */
+function blinkSpecFromWins(wins, roles) {
+  const spec = [], seen = new Set();
+  wins.forEach(w => {
+    if (!roles.includes(w.role)) return;
+    const rows = LINES[w.line];
+    const cells = w.role === 'CHERRY' ? [[0, rows[0]]] : rows.map((row, i) => [i, row]);
+    cells.forEach(c => { const k = c.join(','); if (!seen.has(k)) { seen.add(k); spec.push(c); } });
+  });
+  return spec.length ? spec : null;
+}
 function startWinBlink() {
   stopWinBlink();
-  if (!winBlinkRows) return;
-  reels.forEach((r, i) => {
+  if (!winBlinkSpec) return;
+  winBlinkSpec.forEach(([i, row]) => {
+    const r = reels[i];
+    if (!r) return;
     const p = Math.round(r.pos);
     const ep = p < 1 ? p + KOMA : p; // render()と同じ基準(窓の上段 = 帯のep番目)
-    const cell = r.strip.children[ep + winBlinkRows[i]];
+    const cell = r.strip.children[ep + row];
     if (!cell) return;
     /* 「暗い図柄」を重ねて出したり消したりする (実機のように7・BARの色だけが点滅) */
     const key = cell.querySelector('img') ? cell.querySelector('img').dataset.img : '';
@@ -874,7 +889,7 @@ function startWinBlink() {
     cell.classList.add('win-blink');
     winBlinkCells.push(cell);
   });
-  winBlinkRows = null;
+  winBlinkSpec = null;
 }
 function stopWinBlink() {
   winBlinkCells.forEach(c => { c.classList.remove('win-blink'); c.querySelectorAll('.dim-ov').forEach(o => o.remove()); });
@@ -1221,7 +1236,7 @@ const SYM_OPT = {}; // 最適化済み画像キャッシュ (後から生成す�
 /* 777/77BAR点滅用の「暗い7・暗いBAR」: 色のついた所(赤・黄)だけ暗くし、白・黒・背景はそのまま */
 const SYM_DIM = {};
 const WIN_DIM_K = 0.45;          // 暗さ (0=変化なし / 大きいほど暗い)
-const WIN_DIM_KEYS = ['7', '6']; // 7 と BAR
+const WIN_DIM_KEYS = ['7', '6', '1', '2', '3', '4', 'C2']; // 7・BAR・ブドウ・チェリー・ピエロ・ベル・チェリー(葉2枚)
 function optimizeSymbolImages() {
   const W = 512, H = 188; // 1280:470 と同比率 (512*470/1280=188)
   const ALL_IMG = Object.assign({}, SYM_IMG, REEL_IMG_ALT); // 見た目差し替え用画像も最適化
@@ -1350,6 +1365,7 @@ function betCtActive() {
 }
 
 function addBet(n) {
+  if (state.gamePhase === 'idle') stopWinBlink(); // 1BETでも点滅終了
   /* 1BETボタンはボーナス中は使用不可(ボーナス中はMAXBETで2枚固定) */
   if (state.gamePhase !== 'idle' || state.replayPending || state.inBonus || state.betLock || state.payoutLock || state.xLock) return;
   const cap = betCapNow();
@@ -1367,6 +1383,7 @@ function addBet(n) {
 }
 
 function setMaxBet() {
+  if (state.gamePhase === 'idle') stopWinBlink(); // 777/77BARの点滅はMAXBETで終了
   if (state.gamePhase !== 'idle' || state.replayPending || state.betLock || state.payoutLock || state.xLock) return;
   /* ボーナス中=2枚固定 / GOGO中1BET設定=1枚 / 通常=3枚 */
   const max = betCapNow();
@@ -1415,7 +1432,7 @@ function leverOn(betDelayMs = 1000) {
   state.lampTapArmed = lampTapCount === 5 && !state.inBonus && !state.lampLit &&
     !(state.challenge && state.challenge.active) && !taActive();
   lampTapCount = 0;
-  stopWinBlink(); // 揃った図柄の点滅は次のレバーONまで
+  stopWinBlink(); // 保険: BETせずにレバーを引いた場合(リプレイ等)も点滅終了
   state.gamePhase = 'prelever';
   updateUI();
   if (autoBetDelay > 0) setTimeout(fireLever, autoBetDelay);
@@ -1675,7 +1692,6 @@ function onStopRelease() {
     const type = state.pendingBonus;
     state.pendingBonus = null;
     if (state.lampPending) { state.lampPending = false; lightLamp(true); mSet('latePeka'); }
-    startWinBlink(); // ボタンを離した瞬間から揃ったラインを点滅
     startBonus(type);
     updateUI();
     return;
@@ -1883,8 +1899,7 @@ function resolveGame() {
 
   if (bonusAligned) {
     state.replayLamp = false; // ボーナス突入でReplayランプは消灯
-    const bw = wins.find(w => w.role === state.bonusFlag);
-    winBlinkRows = bw ? LINES[bw.line] : null; // 点滅させるライン(開始はボーナス開始時)
+    winBlinkSpec = blinkSpecFromWins(wins.filter(w => w.role === state.bonusFlag), BLINK_LINE_ROLES); // 揃ったボーナスライン
     /* 目押しTA: 揃った瞬間に計測終了。ボーナスには突入しない(BGMもhit音のみ) */
     if (state.ta && state.ta.phase === 'running') {
       const type = state.bonusFlag;
@@ -1901,6 +1916,7 @@ function resolveGame() {
     /* 実機準拠: 第3停止ボタンを押し込んだままの間はボーナスに突入せず、
        BGM(BBhit/RB)も鳴らさない。ボタンを離した瞬間にstartBonus()する。 */
     if (state.stopHeld) {
+      startWinBlink(); // 揃った瞬間から点滅 (ボタンを離す前でも)
       state.pendingBonus = state.bonusFlag;
       state.bet = 0;
       state.gamePhase = 'idle';
@@ -1908,10 +1924,13 @@ function resolveGame() {
       updateUI();
       return;
     }
-    startWinBlink();
+    startWinBlink(); // 揃った瞬間から点滅
     startBonus(state.bonusFlag);
   } else {
     pay = payoutFor(wins, bet, cherryUnitFor(bet, state.cols));
+    /* 小役の点滅: ブドウ・ベル・ピエロ揃い / 左チェリー (ボーナス中はブドウ・チェリーのみ成立) */
+    winBlinkSpec = blinkSpecFromWins(wins, ['GRAPE', 'BELL', 'CLOWN', 'CHERRY']);
+    if (winBlinkSpec) startWinBlink();
     const hasReplay = wins.some(w => w.role === 'REPLAY');
 
     if (pay > 0) {
@@ -3129,7 +3148,7 @@ function resetAll() {
   audio.stopSELoop();
   unlightLamp();
   tsunotti('off'); // プレミアBB中のリセットでツノッチが残る不具合の修正
-  stopWinBlink(); winBlinkRows = null;
+  stopWinBlink(); winBlinkSpec = null;
   el.topBanner.classList.remove('bonus-flash', 'x-rainbow');
   clearBonusBlink();
   xClearTimers();
