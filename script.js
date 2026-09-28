@@ -849,6 +849,25 @@ const el = {
 const mod = (n, m) => ((n % m) + m) % m;
 const modK = n => mod(n, KOMA);
 
+/* ボーナス図柄(777 / 77BAR)が揃ったラインの3マスを点滅させる (実機のバックライト点滅)
+   開始: ボタンを離してボーナスが始まる瞬間 / 終了: 次のレバーON */
+let winBlinkRows = null;   // 揃ったラインの各リールの行 (LINESの1本)
+let winBlinkCells = [];
+function startWinBlink() {
+  stopWinBlink();
+  if (!winBlinkRows) return;
+  reels.forEach((r, i) => {
+    const p = Math.round(r.pos);
+    const ep = p < 1 ? p + KOMA : p; // render()と同じ基準(窓の上段 = 帯のep番目)
+    const cell = r.strip.children[ep + winBlinkRows[i]];
+    if (cell) { cell.classList.add('win-blink'); winBlinkCells.push(cell); }
+  });
+  winBlinkRows = null;
+}
+function stopWinBlink() {
+  winBlinkCells.forEach(c => c.classList.remove('win-blink'));
+  winBlinkCells = [];
+}
 function windowCol(reelIdx, pos) {
   const d = REEL_DATA[reelIdx];
   return [d[modK(pos)], d[modK(pos + 1)], d[modK(pos + 2)]];
@@ -1363,6 +1382,7 @@ function leverOn(betDelayMs = 1000) {
   state.lampTapArmed = lampTapCount === 5 && !state.inBonus && !state.lampLit &&
     !(state.challenge && state.challenge.active) && !taActive();
   lampTapCount = 0;
+  stopWinBlink(); // 揃った図柄の点滅は次のレバーONまで
   state.gamePhase = 'prelever';
   updateUI();
   if (autoBetDelay > 0) setTimeout(fireLever, autoBetDelay);
@@ -1622,6 +1642,7 @@ function onStopRelease() {
     const type = state.pendingBonus;
     state.pendingBonus = null;
     if (state.lampPending) { state.lampPending = false; lightLamp(true); mSet('latePeka'); }
+    startWinBlink(); // ボタンを離した瞬間から揃ったラインを点滅
     startBonus(type);
     updateUI();
     return;
@@ -1829,6 +1850,8 @@ function resolveGame() {
 
   if (bonusAligned) {
     state.replayLamp = false; // ボーナス突入でReplayランプは消灯
+    const bw = wins.find(w => w.role === state.bonusFlag);
+    winBlinkRows = bw ? LINES[bw.line] : null; // 点滅させるライン(開始はボーナス開始時)
     /* 目押しTA: 揃った瞬間に計測終了。ボーナスには突入しない(BGMもhit音のみ) */
     if (state.ta && state.ta.phase === 'running') {
       const type = state.bonusFlag;
@@ -1852,6 +1875,7 @@ function resolveGame() {
       updateUI();
       return;
     }
+    startWinBlink();
     startBonus(state.bonusFlag);
   } else {
     pay = payoutFor(wins, bet, cherryUnitFor(bet, state.cols));
@@ -3072,6 +3096,7 @@ function resetAll() {
   audio.stopSELoop();
   unlightLamp();
   tsunotti('off'); // プレミアBB中のリセットでツノッチが残る不具合の修正
+  stopWinBlink(); winBlinkRows = null;
   el.topBanner.classList.remove('bonus-flash', 'x-rainbow');
   clearBonusBlink();
   xClearTimers();
