@@ -21,9 +21,6 @@
 /* ===== 機種別カラー (html[data-machine]) =====
    ゴーゴージャグラー3: フレームをピンクに */
 html[data-machine="gogo"] {
-  /* リール側フレームは #741F29 基調 (周りは少し暗め)。バナーはピンクのまま */
-  --reel-panel: linear-gradient(160deg, #5c1720 0%, #741F29 30%, #4c131a 70%, #641b24 100%);
-  --reel-border: #2a080c;
   --panel-red: linear-gradient(160deg, #c41e66 0%, #ee3f8c 30%, #a8165a 70%, #d62a77 100%);
   --panel-red-deep: #6a0a36;
   --panel-border: #3e0520;
@@ -185,7 +182,7 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
   text-shadow: 0 0 8px #ff8, 1px 1px 0 #600;
 }
 /* [ゴーゴー3] ツノッチ (BET3ランプの上=リール左上の角のプレミア)。大きさ・位置は --tsu-w / --tsu-x / --tsu-y で調整 */
-#reelFrame { --tsu-w: 26px; --tsu-x: 1px; --tsu-y: -16px; }
+#reelFrame { --tsu-w: 26px; --tsu-x: 0px; --tsu-y: 0px; }
 #tsunotti {
   position: absolute; left: var(--tsu-x); top: var(--tsu-y); width: var(--tsu-w); height: auto;
   opacity: 0; pointer-events: none; z-index: 2; -webkit-user-select: none; user-select: none;
@@ -249,14 +246,13 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
   background: var(--reel-panel);
   border: 3px solid var(--reel-border);
   border-radius: 12px;
-  padding: 8px 6px 6px;
+  padding: 6px;
   box-shadow: inset 0 0 26px rgba(0,0,0,.55);
 }
 #reelFrame {
-  display: flex; align-items: stretch; gap: 4px;
-  background: none; /* 黒背景なし: フレームの色をそのまま見せる (リール個別の枠線は残す) */
-  border-radius: 10px; padding: 8px 4px;
-  margin-top: 10px; /* リール・BETランプ・状態ランプをまとめて10px下げる */
+  display: flex; align-items: stretch; gap: 5px;
+  background: none; /* 3リールの枠の外側はフレームの色をそのまま見せる */
+  padding: 2px;
   position: relative; /* ツノッチの配置基準 */
 }
 
@@ -276,6 +272,11 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 /* リール窓 */
 #reelWindow {
   flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;
+  background: #050507;               /* リールとリールの間は黒 */
+  padding: 4px;
+  border: 3px solid #1c2a78;         /* 実機風の紺枠 */
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px #c9a23a, inset 0 0 0 1px #c9a23a, inset 0 3px 10px rgba(0,0,0,.9); /* 細い金線 */
 }
 .reel {
   position: relative; overflow: hidden; background: #f7f7f7;
@@ -335,8 +336,11 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 }
 
 /* --- ランプ + 7セグ --- */
-#underReel { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; }
-#gogoLamp { width: 20%; max-width: 78px; flex-shrink: 0; position: relative; }
+#underReel {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px; margin-top: 6px;
+}
+#gogoLamp { grid-column: 1; justify-self: start; width: 52px; flex-shrink: 0; position: relative; }
+#segArea { grid-column: 2; }
 /* 強ガコッ!: 告知音が大きいプレミア。ランプが一瞬強く光る */
 #gogoLamp.strong-gako { animation: strongGako .9s ease-out; }
 @keyframes strongGako {
