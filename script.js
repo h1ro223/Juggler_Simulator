@@ -866,10 +866,16 @@ function blinkSpecFromWins(wins, roles) {
   });
   return spec.length ? spec : null;
 }
+let winBlinkToken = 0;     // 点滅を止めるたびに進む (払い出し後の遅延点滅の取り消し判定用)
 function startWinBlink() {
   stopWinBlink();
-  if (!winBlinkSpec) return;
-  winBlinkSpec.forEach(([i, row]) => {
+  addWinBlink(winBlinkSpec);
+  winBlinkSpec = null;
+}
+/* 今の点滅を止めずに、マスを追加で点滅させる */
+function addWinBlink(spec) {
+  if (!spec) return;
+  spec.forEach(([i, row]) => {
     const r = reels[i];
     if (!r) return;
     const p = Math.round(r.pos);
@@ -889,9 +895,9 @@ function startWinBlink() {
     cell.classList.add('win-blink');
     winBlinkCells.push(cell);
   });
-  winBlinkSpec = null;
 }
 function stopWinBlink() {
+  winBlinkToken++;
   winBlinkCells.forEach(c => { c.classList.remove('win-blink'); c.querySelectorAll('.dim-ov').forEach(o => o.remove()); });
   winBlinkCells = [];
 }
@@ -1236,6 +1242,7 @@ const SYM_OPT = {}; // 最適化済み画像キャッシュ (後から生成す�
 /* 777/77BAR点滅用の「暗い7・暗いBAR」: 色のついた所(赤・黄)だけ暗くし、白・黒・背景はそのまま */
 const SYM_DIM = {};
 const WIN_DIM_K = 0.45;          // 暗さ (0=変化なし / 大きいほど暗い)
+const WIN_DIM_K_BY = { '1': 0.62 }; // 図柄ごとの暗さ (ブドウは暗め)
 const WIN_DIM_KEYS = ['7', '6', '1', '2', '3', '4', 'C2']; // 7・BAR・ブドウ・チェリー・ピエロ・ベル・チェリー(葉2枚)
 function optimizeSymbolImages() {
   const W = 512, H = 188; // 1280:470 と同比率 (512*470/1280=188)
@@ -1264,7 +1271,8 @@ function optimizeSymbolImages() {
           for (let i = 0; i < d.length; i += 4) {
             const r = d[i], g = d[i + 1], b = d[i + 2];
             const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
-            const f = 1 - WIN_DIM_K * (mx > 0 ? (mx - mn) / mx : 0); // 彩度が高いほど暗く
+            const k = WIN_DIM_K_BY[sym] ?? WIN_DIM_K;
+            const f = 1 - k * (mx > 0 ? (mx - mn) / mx : 0); // 彩度が高いほど暗く
             d[i] = r * f; d[i + 1] = g * f; d[i + 2] = b * f;
           }
           c.putImageData(id, 0, 0);
@@ -1916,7 +1924,6 @@ function resolveGame() {
     /* 実機準拠: 第3停止ボタンを押し込んだままの間はボーナスに突入せず、
        BGM(BBhit/RB)も鳴らさない。ボタンを離した瞬間にstartBonus()する。 */
     if (state.stopHeld) {
-      startWinBlink(); // 揃った瞬間から点滅 (ボタンを離す前でも)
       state.pendingBonus = state.bonusFlag;
       state.bet = 0;
       state.gamePhase = 'idle';
@@ -1924,13 +1931,13 @@ function resolveGame() {
       updateUI();
       return;
     }
-    startWinBlink(); // 揃った瞬間から点滅
     startBonus(state.bonusFlag);
   } else {
     pay = payoutFor(wins, bet, cherryUnitFor(bet, state.cols));
-    /* 小役の点滅: ブドウ・ベル・ピエロ揃い / 左チェリー (ボーナス中はブドウ・チェリーのみ成立) */
-    winBlinkSpec = blinkSpecFromWins(wins, ['GRAPE', 'BELL', 'CLOWN', 'CHERRY']);
+    /* 小役の点滅: 左チェリーは揃った瞬間 / ブドウ・ベル・ピエロは払い出し(PAY OUT)が終わってから */
+    winBlinkSpec = blinkSpecFromWins(wins, ['CHERRY']);
     if (winBlinkSpec) startWinBlink();
+    const lineBlink = blinkSpecFromWins(wins, ['GRAPE', 'BELL', 'CLOWN']);
     const hasReplay = wins.some(w => w.role === 'REPLAY');
 
     if (pay > 0) {
@@ -1988,6 +1995,10 @@ function resolveGame() {
       } else {
         payoutSndMs = 0; // SE OFF時はロックなし(カウント演出は上で開始済み)
       }
+    }
+    if (lineBlink) {
+      const tk = winBlinkToken;
+      setTimeout(() => { if (tk === winBlinkToken) addWinBlink(lineBlink); }, payoutSndMs); // MAXBET等で止めていたら出さない
     }
     /* Replayランプ: 成立したゲームから、次のゲームが終わるまで点灯状態を保持 */
     state.replayLamp = hasReplay;
@@ -2511,6 +2522,7 @@ function startBonus(type) {
        BB系mp3はhit音の再生終了コールバック内でのみ開始されるため、
        hit停止前にBB系が鳴ることは構造上あり得ない */
     setBonusBlink('BB', true); /* hit音再生開始と同時に点滅開始 */
+    startWinBlink(); // 777もBBhit系の再生開始と同時に点滅
     if (state.bonusVer === 'X') {
       xRunIntro(); /* 777ver: 専用の激アツ演出フロー */
     } else {
@@ -2536,6 +2548,7 @@ function startBonus(type) {
     }
   } else {
     setBonusBlink('RB', true); /* RB.mp3再生開始と同時に点滅開始 */
+    startWinBlink(); // 77BARもRB.mp3の再生開始と同時に点滅
     audio.playBGM('RB'); // RB終了まで即ループ
   }
 }
