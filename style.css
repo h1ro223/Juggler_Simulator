@@ -196,7 +196,7 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 /* BB中 (終了音まで繰り返し) */
 #tsunotti.tsu-fade08   { animation: tsuFade .8s linear infinite alternate; }
 #tsunotti.tsu-fade075  { animation: tsuFade .75s linear infinite alternate; }
-#tsunotti.tsu-blink025 { animation: tsuBlink .6s linear infinite; }
+#tsunotti.tsu-blink025 { animation: tsuBlink .7s linear infinite; }
 /* 軍艦マーチ男性: 0〜3.5秒表示 → 5秒までフェードアウト */
 @keyframes tsuHitA { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
 /* 軍艦マーチ女性: 0〜3.5秒表示 → 4.5秒までフェードアウト */
