@@ -182,7 +182,7 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
   text-shadow: 0 0 8px #ff8, 1px 1px 0 #600;
 }
 /* [ゴーゴー3] ツノッチ (BET3ランプの上=リール左上の角のプレミア)。大きさ・位置は --tsu-w / --tsu-x / --tsu-y で調整 */
-#reelFrame { --tsu-w: 26px; --tsu-x: 0px; --tsu-y: 0px; }
+#reelFrame { --tsu-w: 26px; --tsu-x: 0px; --tsu-y: -6px; }
 #tsunotti {
   position: absolute; left: var(--tsu-x); top: var(--tsu-y); width: var(--tsu-w); height: auto;
   opacity: 0; pointer-events: none; z-index: 2; -webkit-user-select: none; user-select: none;
