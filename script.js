@@ -34,6 +34,7 @@ const MACHINES = {
     bbHitWait: 0,        // BBhit1/2終了→BB曲開始までの待ち(ms)
     pekaFirst: 0.15,     // 先ペカ(レバーON即点灯)の割合
     lampFade: false,     // 後ペカ時のフェード点灯なし(パッと光る)
+    lampFadeOut: 0,      // ボーナス図柄が揃った時の消灯: 0=即消灯
     rainbow: true        // 中段チェリー時のレインボー点灯あり
   },
   gogo: {
@@ -56,6 +57,7 @@ const MACHINES = {
     bbHitWait: 500,       // BBhit1/2終了→BB_A開始までの待ち(ms) ※一時的な設定
     pekaFirst: 0,        // 即ペカはプレミア(即点灯)のみ。通常は必ず後ペカ
     lampFade: true,      // 後ペカは0.25秒かけてふわっと点灯
+    lampFadeOut: 500,    // 777/77BARが揃った時、GOGOランプを0.5秒(ms)かけてフェード消灯
     rainbow: false       // レインボー点灯なし(GOGO2は使わない)
   }
 };
@@ -1735,6 +1737,7 @@ function startFreeze() {
 
 /* fade: 最後の停止ボタンを離した点灯なら true (ゴーゴー3は0.25秒フェード、アイムは常にパッと点灯) */
 function lightLamp(fade = false) {
+  clearLampFadeOut(); // 消灯フェード中に再点灯しても画像が消えないように
   state.lampLit = true;
   state.lampPending = false;
   el.gogoLamp.classList.toggle('fade-in', !!(fade && MACHINE.lampFade));
@@ -1763,11 +1766,31 @@ function lightLamp(fade = false) {
   refreshPekaBtn(); // モーダルを開いたままでもボタン表示を追従
 }
 
-function unlightLamp() {
+/* GOGOランプのフェード消灯 (ゴーゴー3: ボーナス図柄が揃った時) */
+let lampOffTimer = 0;
+function clearLampFadeOut() {
+  if (lampOffTimer) { clearTimeout(lampOffTimer); lampOffTimer = 0; }
+  el.gogoLamp.classList.remove('fade-out');
+}
+
+/* fadeMs: 0=即消灯(既定) / 1以上=その時間(ms)をかけて見た目だけフェード消灯。
+   ランプの状態(state.lampLit等)は呼んだ瞬間に消灯扱いになる */
+function unlightLamp(fadeMs = 0) {
+  clearLampFadeOut();
   state.lampLit = false;
   state.lampPending = false;
   state.rareLamp = false;
-  el.gogoImgOn.hidden = true;
+  if (fadeMs > 0 && !el.gogoImgOn.hidden) {
+    el.gogoLamp.style.setProperty('--lamp-out', fadeMs + 'ms');
+    el.gogoLamp.classList.add('fade-out'); // 点灯画像を残したまま opacity 1→0
+    lampOffTimer = setTimeout(() => {
+      lampOffTimer = 0;
+      el.gogoImgOn.hidden = true;
+      el.gogoLamp.classList.remove('fade-out');
+    }, fadeMs);
+  } else {
+    el.gogoImgOn.hidden = true;
+  }
   el.gogoLamp.classList.remove('lit', 'rainbow', 'fade-in');
   $('gogoImgRainbow').hidden = true;
   el.dpStart.classList.remove('x-blink');
@@ -2509,7 +2532,7 @@ function startBonus(type) {
   const sesB = state.counts.bb + state.counts.rb;
   if (sesB >= 5) mSet('ses5');
   if (sesB >= 10) mSet('ses10');
-  unlightLamp();
+  unlightLamp(MACHINE.lampFadeOut || 0); // ゴーゴー3=0.5秒フェード消灯 / アイム=即消灯(777verも従来どおり)
   el.topBanner.classList.add('bonus-flash');
   message(type === 'BB' ? `BIG BONUS!! (最大+${BB_SKIP_PAY}枚)` : `REGULAR BONUS!! (最大+${RB_SKIP_PAY}枚)`, true);
   if (type === 'BB') {
