@@ -57,7 +57,7 @@ const MACHINES = {
     bbHitWait: 500,       // BBhit1/2終了→BB_A開始までの待ち(ms) ※一時的な設定
     pekaFirst: 0,        // 即ペカはプレミア(即点灯)のみ。通常は必ず後ペカ
     lampFade: true,      // 後ペカは0.25秒かけてふわっと点灯
-    lampFadeOut: 500,    // 777/77BARが揃った時、GOGOランプを0.5秒(ms)かけてフェード消灯
+    lampFadeOut: 250,    // 777/77BARが揃った時、GOGOランプを0.25秒(ms)かけてフェード消灯
     rainbow: false       // レインボー点灯なし(GOGO2は使わない)
   }
 };
@@ -2532,7 +2532,7 @@ function startBonus(type) {
   const sesB = state.counts.bb + state.counts.rb;
   if (sesB >= 5) mSet('ses5');
   if (sesB >= 10) mSet('ses10');
-  unlightLamp(MACHINE.lampFadeOut || 0); // ゴーゴー3=0.5秒フェード消灯 / アイム=即消灯(777verも従来どおり)
+  unlightLamp(MACHINE.lampFadeOut || 0); // ゴーゴー3=0.25秒フェード消灯 / アイム=即消灯(777verも従来どおり)
   el.topBanner.classList.add('bonus-flash');
   message(type === 'BB' ? `BIG BONUS!! (最大+${BB_SKIP_PAY}枚)` : `REGULAR BONUS!! (最大+${RB_SKIP_PAY}枚)`, true);
   if (type === 'BB') {

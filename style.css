@@ -371,7 +371,7 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 #gogoLamp.lit.fade-in #gogoImgOn { animation: lampFadeIn .25s ease-out both, gogoGlow 1s ease-in-out .25s infinite; }
 @keyframes lampFadeIn { from { opacity: 0; } to { opacity: 1; } }
 /* ゴーゴー3: 777/77BARが揃った時のフェード消灯 (秒数は script.js の MACHINES.gogo.lampFadeOut) */
-#gogoLamp.fade-out #gogoImgOn { animation: lampFadeOut var(--lamp-out, .5s) linear both; }
+#gogoLamp.fade-out #gogoImgOn { animation: lampFadeOut var(--lamp-out, .25s) linear both; }
 @keyframes lampFadeOut {
   from { opacity: 1; filter: drop-shadow(0 0 4px rgba(120,120,255,.9)); }
   to   { opacity: 0; filter: drop-shadow(0 0 4px rgba(120,120,255,.9)); }
