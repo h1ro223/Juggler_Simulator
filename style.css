@@ -24,6 +24,7 @@ html[data-machine="gogo"] {
   --panel-red: linear-gradient(160deg, #c41e66 0%, #ee3f8c 30%, #a8165a 70%, #d62a77 100%);
   --panel-red-deep: #6a0a36;
   --panel-border: #3e0520;
+  --reel-panel: linear-gradient(160deg, #a71a57 0%, #ca3677 30%, #8f134d 70%, #b62465 100%);
 }
 
 /* デジタル7セグ風フォント (DSEG7 Modern Bold / ローカル同梱) */
