@@ -4197,6 +4197,9 @@ function bindEvents() {
 function init() {
   audio.init();
   loadGame();
+  /* [音量復元] audio.init() は loadGame() より先に走るため、その時点のGainは初期値(BGM50/SE35)のまま。
+     ロードした保存音量をここで改めてGainに反映する(リロード後に音量がズレる不具合の修正) */
+  audio.applyVolumes();
   for (let i = 0; i < 3; i++) reels.push(new Reel(i));
   optimizeSymbolImages(); // スマホのラグ対策
   syncMedalDisplay(); // 表示値をロード値に同期
