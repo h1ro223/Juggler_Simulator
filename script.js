@@ -30,7 +30,7 @@ const MACHINES = {
     bbLimit: 280,        // BB: この枚数を超える払い出しで終了 (COUNT294)
     bbSkipPay: 252,      // BB: 実際の獲得枚数
     gogoSnd: true,       // ペカ音(GOGOCHANCE.mp3)あり
-    replaySplit: false,  // リプレイ音: Replay1/2/3.mp3(リプレイ+BET音一体型)
+    replaySplit: true,   // リプレイ音: Replay.mp3 → 再生終了後にBET数に応じたBET音 (旧: Replay1/2/3.mp3一体型)
     bbHitWait: 0,        // BBhit1/2終了→BB曲開始までの待ち(ms)
     pekaFirst: 0.15,     // 先ペカ(レバーON即点灯)の割合
     lampFade: false,     // 後ペカ時のフェード点灯なし(パッと光る)
@@ -76,16 +76,16 @@ const MACHINES = {
     bbLimit: 266,        // BB: COUNT280で終了 (ゴーゴー3と同じ)
     bbSkipPay: 240,      // BB: 実際の獲得枚数
     gogoSnd: false,      // ペカ音なし (※仮: 解析後に調整)
-    replaySplit: false,  // リプレイ音: アイムと同じ Replay1/2/3.mp3 一体型 (※仮)
+    replaySplit: true,   // リプレイ音: Replay.mp3 → 再生終了後にBET数に応じたBET音
     bbHitWait: 0,        // BBhit1/2終了→BB曲開始までの待ち(ms) (※仮)
     pekaFirst: 0.15,     // 先ペカの割合 (※仮: アイムと同じ)
     lampFade: false,     // 後ペカはパッと点灯 (※仮)
     lampFadeOut: 0,      // ボーナス図柄が揃った時は即消灯 (※仮)
     rainbow: false,      // レインボー点灯なし
-    bbVersions: false,   // 楽曲バージョン(軍艦マーチ等)なし: 常に通常ver (※演出は後日)
+    zoroStar: false,     // 星条旗verの準備ができたら true に (ゾロ目BBで 運命/星条旗 を50%ずつ。false=運命100%)
     premium: false,      // プレミア演出なし: 通常のペカ(先・後)のみ (※演出は後日)
     /* 他機種と同名の素材のうち、この機種でも使うもの (FunJフォルダから読み込む) */
-    shareAssets: ['BB', 'REPLAY1', 'REPLAY2', 'REPLAY3'],
+    shareAssets: ['BB_A', 'BB_B', 'BBHITSP', 'BBSP', 'BBFINISHSP', 'BBHITUNMEI', 'BBUNMEI', 'BBFINISHUNMEI'],
     /* リール配列 (index0 = コマ21(上) → index20 = コマ01(下))
        1=ブドウ 2=チェリー 3=ピエロ 4=ベル 5=リプレイ 6=BAR 7=7
        ※左リール コマ13 の Cherry2 は「見た目だけ違うチェリー」(抽選・停止制御・配当はチェリー=2) */
@@ -573,7 +573,9 @@ const BGM_FILES = {
   BBX2: './BGM/BBX2.mp3',                 // BB後半 (210〜294)
   BBHITX2: './BGM/BBhitX_2nd.mp3',        // セカンドゾーン突入
   BBX2ND: './BGM/BBX_2nd.mp3',            // セカンドゾーン中 (294〜336)
-  BB_A: './BGM/BB_A.mp3', BB_B: './BGM/BB_B.mp3', // ゴーゴー3: BB中に交互再生
+  BB_A: './BGM/BB_A.mp3', BB_B: './BGM/BB_B.mp3', // ゴーゴー3: BB中に交互再生 / ファンキー2: COUNT210でA→B
+  /* ファンキー2: 星条旗よ永遠なれver (100G以内のゾロ目でBB・運命とランダム) ※ファイル名は仮 */
+  BBHITSTAR: './BGM/BBhitStar.mp3', BBSTAR: './BGM/BBStar.mp3', BBFINISHSTAR: './BGM/BBFinishStar.mp3',
   /* ゴーゴー3: 軍艦マーチver (前回ボーナス終了から1GでBB / A=男性 B=女性) */
   BBHITSP_A: './BGM/BBhitSP_A.mp3', BBSP_A: './BGM/BBSP_A.mp3', BBFINISHSP_A: './BGM/BBFinishSP_A.mp3',
   BBHITSP_B: './BGM/BBhitSP_B.mp3', BBSP_B: './BGM/BBSP_B.mp3', BBFINISHSP_B: './BGM/BBFinishSP_B.mp3',
@@ -603,7 +605,12 @@ const BB_VERS = {
   GSP_B:  { hit: 'BBHITSP_B', loop: 'BBSP_B', fin: 'BBFINISHSP_B', grape: 'GRAPE14SP_B' }, // 軍艦マーチ(女性)
   GZ1:    { hit: 'BBHIT_SP1', loop: 'BBSP1',  fin: 'BBFINISHSP1',  grape: 'GRAPE14' },     // コロブチカ
   GZ2:    { hit: 'BBHIT_SP2', loop: 'BBSP2',  fin: 'BBFINISHSP2',  grape: 'GRAPE14', intro: 'BBSP2_INTRO' }, // クラリネットをこわしちゃった
-  GZ3:    { hit: 'BBHIT_SP3', loop: 'BBSP3',  fin: 'BBFINISHSP3',  grape: 'GRAPE14', intro: 'BBSP3_INTRO' } // 魔王
+  GZ3:    { hit: 'BBHIT_SP3', loop: 'BBSP3',  fin: 'BBFINISHSP3',  grape: 'GRAPE14', intro: 'BBSP3_INTRO' }, // 魔王
+  /* ファンキー2 (hitWait: hit終了→BB曲開始までの待ちms / mission: ミッション判定に使うver名)
+     ※GetGrape14SP・LeverSPは未準備のため通常のGetGrape14・Leverを使用 */
+  FSP:    { hit: 'BBHITSP',    loop: 'BBSP',    fin: 'BBFINISHSP',    grape: 'GRAPE14', hitWait: 100, mission: 'SP' }, // 軍艦マーチ
+  FUNMEI: { hit: 'BBHITUNMEI', loop: 'BBUNMEI', fin: 'BBFINISHUNMEI', grape: 'GRAPE14', mission: 'UNMEI' },          // 運命
+  FSTAR:  { hit: 'BBHITSTAR',  loop: 'BBSTAR',  fin: 'BBFINISHSTAR',  grape: 'GRAPE14' }                              // 星条旗よ永遠なれ
 };
 
 /* BB当選時のG数(前回ボーナス終了から)で楽曲バージョンを決定
@@ -612,8 +619,13 @@ const BB_VERS = {
      これがないと BB0/RB0/総回転0 の状態で1G目や2〜5G目に当選しただけで
      軍艦マーチver・第九verが鳴ってしまう。 */
 function pickBBVersion(g) {
-  if (MACHINE.bbVersions === false) return 'NORMAL'; // ファンキー2: 楽曲バージョンなし(演出は後日)
+  if (MACHINE.bbVersions === false) return 'NORMAL'; // 楽曲バージョンなしの機種用
   if (!state.hadBonus) return 'NORMAL'; // 初回ボーナスは必ず通常ver
+  if (MACHINE_ID === 'funky2') {
+    if (g === 1) return 'FSP';                                                     // 軍艦マーチ
+    if (g >= 11 && g <= 99 && g % 11 === 0) return (MACHINE.zoroStar && Math.random() < 0.5) ? 'FSTAR' : 'FUNMEI'; // ゾロ目: 運命/星条旗
+    return 'NORMAL';
+  }
   if (MACHINE_ID === 'gogo') {
     if (g === 1) return Math.random() < 0.75 ? 'GSP_A' : 'GSP_B';          // 軍艦マーチ 男性75% / 女性25%
     if (g >= 11 && g <= 99 && g % 11 === 0) return ['GZ1', 'GZ2', 'GZ3'][Math.floor(Math.random() * 3)]; // ゾロ目
@@ -647,8 +659,11 @@ const ASSET_OWNER = {};
  'LEVERSP', 'GRAPE14SP', 'GRAPE14X', 'REPLAY1', 'REPLAY2', 'REPLAY3', 'GOGO'].forEach(k => { ASSET_OWNER[k] = 'aime'; });
 ['BB_A', 'BB_B', 'BBHITSP_A', 'BBSP_A', 'BBFINISHSP_A', 'BBHITSP_B', 'BBSP_B', 'BBFINISHSP_B',
  'BBHIT_SP1', 'BBSP1', 'BBFINISHSP1', 'BBHIT_SP2', 'BBSP2', 'BBFINISHSP2', 'BBSP2_INTRO', 'BBHIT_SP3', 'BBSP3', 'BBFINISHSP3', 'BBSP3_INTRO',
- 'GRAPE14SP_A', 'GRAPE14SP_B', 'LEVERSP_A', 'LEVERSP_B', 'REPLAY'].forEach(k => { ASSET_OWNER[k] = 'gogo'; });
+ 'GRAPE14SP_A', 'GRAPE14SP_B', 'LEVERSP_A', 'LEVERSP_B'].forEach(k => { ASSET_OWNER[k] = 'gogo'; });
+/* ※REPLAY(Replay.mp3)は全機種共通 (リプレイ音は全機種 分割型) */
+['BBHITSTAR', 'BBSTAR', 'BBFINISHSTAR'].forEach(k => { ASSET_OWNER[k] = 'funky2'; });
 function assetUsable(k) {
+  if (/STAR$/.test(k) && !MACHINE.zoroStar) return false; // 星条旗verは準備できるまで読み込まない
   return !ASSET_OWNER[k] || ASSET_OWNER[k] === MACHINE_ID ||
     (MACHINE.shareAssets || []).includes(k); // 他機種専用キーでも、この機種が同名素材を持つなら読み込む(ファンキー2)
 }
@@ -2073,8 +2088,8 @@ function resolveGame() {
       message('REPLAY! もう一度レバーON!');
       const gogoWaitR = Math.max(0, state.gogoSndEnd - performance.now());
       /* リプレイ音 (旧ReplayBet.mp3は常に3BET音固定だったバグの修正。再生タイミングは今後調整予定)
-         アイム    : Replay1/2/3.mp3 (リプレイ+BET音一体型) をBET数で選択
-         ゴーゴー3 : Replay.mp3 + BET数に応じたBET音(Bet/MaxBet2/MaxBet3)を同時再生 */
+         分割型(全機種): Replay.mp3 → 再生終了後にBET数に応じたBET音(Bet/MaxBet2/MaxBet3)
+         一体型(replaySplit:false): Replay1/2/3.mp3 (リプレイ+BET音一体型) をBET数で選択 ※現在未使用 */
       const playReplaySnd = MACHINE.replaySplit
         ? () => { // Replay.mp3の再生終了後すぐにBET音(1BET=Bet / 2BET=MaxBet2 / 3BET=MaxBet3)
             audio.playSE('REPLAY');
@@ -2099,6 +2114,11 @@ function resolveGame() {
         /* ゴーゴー3: 切替COUNTに達したら、GetGrape14の再生終了と同時にBB_A⇔BB_Bを切り替え */
         if (MACHINE_ID === 'gogo' && state.bonusType === 'BB' && (!state.bonusVer || state.bonusVer === 'NORMAL') && GOGO_BB_SWITCH.includes(state.bonusPaid)) {
           setTimeout(() => { if (state.inBonus && state.bonusType === 'BB') audio.playBGM(bbLoopKey()); }, payoutSndMs);
+        }
+        /* ファンキー2: COUNT210をまたいだら、GetGrape14の再生終了と同時にBB_A→BB_B (BBhit再生中は開始時にBが選ばれるので不要) */
+        if (MACHINE_ID === 'funky2' && state.bonusType === 'BB' && (!state.bonusVer || state.bonusVer === 'NORMAL') &&
+            state.bonusPaid - pay < FUNKY_BB_SWITCH && state.bonusPaid >= FUNKY_BB_SWITCH && !state.bbHitPlaying) {
+          setTimeout(() => { if (state.inBonus && state.bonusType === 'BB' && !state.bbHitPlaying) audio.playBGM(bbLoopKey()); }, payoutSndMs);
         }
         message(`${state.bonusType === 'BB' ? 'BIG' : 'REGULAR'} BONUS 中!  ${state.bonusPaid} / ${limit}枚`);
       }
@@ -2536,6 +2556,8 @@ function tsunotti(phase) {
 
 /* ゴーゴー3のBB中BGM切替COUNT: 0〜56=A / 56〜112=B / 112〜154=A / 154〜196=B / 196〜238=A / 238〜280=B */
 const GOGO_BB_SWITCH = [56, 112, 154, 196, 238];
+/* ファンキー2のBB中BGM切替COUNT: 0〜210=BB_A / 210〜280=BB_B */
+const FUNKY_BB_SWITCH = 210;
 /* ボーナス中BGMの再開キー (リロード復帰・BGMトグル用。777verは進行段階に応じた曲) */
 function bbLoopKey() {
   if (state.bonusVer === 'X' && state.bonusType === 'BB') {
@@ -2543,6 +2565,9 @@ function bbLoopKey() {
   }
   if (MACHINE_ID === 'gogo' && state.bonusType === 'BB' && (!state.bonusVer || state.bonusVer === 'NORMAL')) { // 通常verのみA/B交互
     return GOGO_BB_SWITCH.filter(t => state.bonusPaid >= t).length % 2 === 0 ? 'BB_A' : 'BB_B';
+  }
+  if (MACHINE_ID === 'funky2' && state.bonusType === 'BB' && (!state.bonusVer || state.bonusVer === 'NORMAL')) { // 通常ver: COUNT210でA→B(1回だけ)
+    return state.bonusPaid >= FUNKY_BB_SWITCH ? 'BB_B' : 'BB_A';
   }
   return (BB_VERS[state.bonusVer] || BB_VERS.NORMAL).loop;
 }
@@ -2581,8 +2606,8 @@ function startBonus(type) {
   if (type === 'BB') {
     /* 当選G数から楽曲バージョンを決定 */
     state.bonusVer = pickBBVersion(state.bbWinG || 0);
-    mSet('ver' + state.bonusVer); // ミッション: 楽曲バージョン実戦コンプ
     const v = BB_VERS[state.bonusVer] || BB_VERS.NORMAL;
+    mSet('ver' + (v.mission || state.bonusVer)); // ミッション: 楽曲バージョン実戦コンプ (ファンキー2の軍艦マーチ/運命もSP/UNMEI扱い)
     /* 777揃い: hit音再生 → 再生終了後にメインBGM(BB終了までループ)。
        hit再生中もレバー等は操作可能(ロックなし)。
        BB系mp3はhit音の再生終了コールバック内でのみ開始されるため、
@@ -2608,7 +2633,8 @@ function startBonus(type) {
           refreshSkipBtn(); // BB系BGM開始と同時にスキップ有効化
           updateUI();
         };
-        if (MACHINE.bbHitWait > 0) setTimeout(startLoop, aMs(MACHINE.bbHitWait));
+        const hitWait = v.hitWait != null ? v.hitWait : MACHINE.bbHitWait; // verごとの指定を優先 (ファンキー2軍艦マーチ: 0.1秒)
+        if (hitWait > 0) setTimeout(startLoop, aMs(hitWait));
         else startLoop();
       });
     }
@@ -4021,13 +4047,24 @@ function bindEvents() {
     { g: '魔王ver',       key: 'BBFINISHSP3', name: 'BB終了 (魔王)' },
     { g: 'REGULAR BONUS', key: 'RB',       name: 'RB中BGM' }
   ];
-  SR_LISTS.funky2 = [ // ファンキー2: 通常BBとRBのみ (演出・楽曲バージョンは後日)
-    { g: '通常ver',       key: 'BBHIT1',   name: 'BB当選ファンファーレ 1' },
-    { g: '通常ver',       key: 'BBHIT2',   name: 'BB当選ファンファーレ 2' },
-    { g: '通常ver',       key: 'BB',       name: 'BB中BGM' },
-    { g: '通常ver',       key: 'BBFINISH', name: 'BB終了' },
-    { g: 'REGULAR BONUS', key: 'RB',       name: 'RB中BGM' }
+  SR_LISTS.funky2 = [ // ファンキー2
+    { g: '通常ver',       key: 'BBHIT1',     name: 'BB当選ファンファーレ 1' },
+    { g: '通常ver',       key: 'BBHIT2',     name: 'BB当選ファンファーレ 2' },
+    { g: '通常ver',       key: 'BB_A',       name: 'BB中BGM (〜COUNT210)' },
+    { g: '通常ver',       key: 'BB_B',       name: 'BB中BGM (COUNT210〜)' },
+    { g: '通常ver',       key: 'BBFINISH',   name: 'BB終了' },
+    { g: '軍艦マーチver', key: 'BBHITSP',    name: 'BB当選 (軍艦マーチ)' },
+    { g: '軍艦マーチver', key: 'BBSP',       name: 'BB中BGM (軍艦マーチ)' },
+    { g: '軍艦マーチver', key: 'BBFINISHSP', name: 'BB終了 (軍艦マーチ)' },
+    { g: '運命ver',       key: 'BBHITUNMEI',    name: 'BB当選 (運命)' },
+    { g: '運命ver',       key: 'BBUNMEI',       name: 'BB中BGM (運命)' },
+    { g: '運命ver',       key: 'BBFINISHUNMEI', name: 'BB終了 (運命)' }
   ];
+  if (MACHINES.funky2.zoroStar) SR_LISTS.funky2.push( // 星条旗ver (準備できたら表示)
+    { g: '星条旗よ永遠なれver', key: 'BBHITSTAR',    name: 'BB当選 (星条旗よ永遠なれ)' },
+    { g: '星条旗よ永遠なれver', key: 'BBSTAR',       name: 'BB中BGM (星条旗よ永遠なれ)' },
+    { g: '星条旗よ永遠なれver', key: 'BBFINISHSTAR', name: 'BB終了 (星条旗よ永遠なれ)' });
+  SR_LISTS.funky2.push({ g: 'REGULAR BONUS', key: 'RB', name: 'RB中BGM' });
   let srMachine = MACHINE_ID;                         // サウンドルームで表示中の機種
   let SR_TRACKS = SR_LISTS[srMachine] || SR_LISTS.aime;
   const srAudio = new Audio();
