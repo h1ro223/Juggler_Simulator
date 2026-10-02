@@ -26,11 +26,12 @@ html[data-machine="gogo"] {
   --panel-border: #3e0520;
   --reel-panel: linear-gradient(160deg, #a71a57 0%, #ca3677 30%, #8f134d 70%, #b62465 100%);
 }
-/* ファンキージャグラー2: フレームを黒より少し明るい黒に (実機は真っ黒。背景#101014と同化しないよう少し持ち上げる) */
+/* ファンキージャグラー2: フレームを黒寄りに (実機は真っ黒。背景#101014と同化しないよう縁は少し明るく) */
 html[data-machine="funky2"] {
-  --panel-red: linear-gradient(160deg, #2c2c32 0%, #44444c 30%, #222227 70%, #37373e 100%);
-  --panel-red-deep: #18181c;
-  --panel-border: #55555e; /* 縁は明るめのグレーで背景との境目を出す */
+  --panel-red: linear-gradient(160deg, #1d1d22 0%, #303037 30%, #16161a 70%, #27272d 100%);
+  --panel-red-deep: #101013;
+  --panel-border: #48484f; /* 縁は明るめのグレーで背景との境目を出す */
+  --bb-blink: .1s;         /* 777揃いの点滅1周期 (.1s = 0.05秒おきに点滅) */
 }
 
 /* デジタル7セグ風フォント (DSEG7 Modern Bold / ローカル同梱) */
@@ -307,6 +308,11 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
   animation: winBlink .4s steps(1) infinite;
 }
 @keyframes winBlink { 0% { opacity: 0; } 50% { opacity: 1; } }
+/* [ファンキー2] 777揃い: 高速点滅 (周期は html[data-machine="funky2"] の --bb-blink) */
+.cell.win-fast .dim-ov { animation-duration: var(--bb-blink, .4s); }
+/* [ファンキー2] 777揃い中は、揃った7以外の小役と白背景を暗く (レバーONで戻る) */
+#reelWindow.bb-dim .cell:not(.win-blink) { filter: brightness(.38); }
+#reelWindow.bb-dim .reel, #reelWindow.bb-dim .strip { background: #616161; } /* 小役の隙間 (白×0.38) */
 /* リール回転中のぼかしは目押し重視のため廃止 */
 .reel .shade {
   position: absolute; inset: 0; pointer-events: none;

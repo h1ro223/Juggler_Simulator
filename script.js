@@ -30,6 +30,7 @@ const MACHINES = {
     bbLimit: 280,        // BB: この枚数を超える払い出しで終了 (COUNT294)
     bbSkipPay: 252,      // BB: 実際の獲得枚数
     gogoSnd: true,       // ペカ音(GOGOCHANCE.mp3)あり
+    gogoSndLateOnly: true, // ペカ音は後ペカのみ (先ペカは無音。777verの先ペカは従来どおり鳴らす)
     replaySplit: true,   // リプレイ音: Replay.mp3 → 再生終了後にBET数に応じたBET音 (旧: Replay1/2/3.mp3一体型)
     bbHitWait: 0,        // BBhit1/2終了→BB曲開始までの待ち(ms)
     pekaFirst: 0.15,     // 先ペカ(レバーON即点灯)の割合
@@ -75,7 +76,9 @@ const MACHINES = {
     saveSuffix: '_funky2',
     bbLimit: 266,        // BB: COUNT280で終了 (ゴーゴー3と同じ)
     bbSkipPay: 240,      // BB: 実際の獲得枚数
-    gogoSnd: false,      // ペカ音なし (※仮: 解析後に調整)
+    gogoSnd: true,       // ペカ音(GOGOCHANCE.mp3)あり
+    gogoSndLateOnly: true, // ペカ音は後ペカのみ (先ペカは無音)
+    bbBlinkDim: true,    // BB(777)揃い: 777を高速点滅+周りを暗く (レバーONで戻す)。速さは style.css の --bb-blink
     replaySplit: true,   // リプレイ音: Replay.mp3 → 再生終了後にBET数に応じたBET音
     bbHitWait: 0,        // BBhit1/2終了→BB曲開始までの待ち(ms) (※仮)
     pekaFirst: 0.15,     // 先ペカの割合 (※仮: アイムと同じ)
@@ -85,7 +88,7 @@ const MACHINES = {
     zoroStar: false,     // 星条旗verの準備ができたら true に (ゾロ目BBで 運命/星条旗 を50%ずつ。false=運命100%)
     premium: false,      // プレミア演出なし: 通常のペカ(先・後)のみ (※演出は後日)
     /* 他機種と同名の素材のうち、この機種でも使うもの (FunJフォルダから読み込む) */
-    shareAssets: ['BB_A', 'BB_B', 'BBHITSP', 'BBSP', 'BBFINISHSP', 'BBHITUNMEI', 'BBUNMEI', 'BBFINISHUNMEI'],
+    shareAssets: ['BB_A', 'BB_B', 'BBHITSP', 'BBSP', 'BBFINISHSP', 'BBHITUNMEI', 'BBUNMEI', 'BBFINISHUNMEI', 'GOGO'],
     /* リール配列 (index0 = コマ21(上) → index20 = コマ01(下))
        1=ブドウ 2=チェリー 3=ピエロ 4=ベル 5=リプレイ 6=BAR 7=7
        ※左リール コマ13 の Cherry2 は「見た目だけ違うチェリー」(抽選・停止制御・配当はチェリー=2) */
@@ -608,7 +611,7 @@ const BB_VERS = {
   GZ3:    { hit: 'BBHIT_SP3', loop: 'BBSP3',  fin: 'BBFINISHSP3',  grape: 'GRAPE14', intro: 'BBSP3_INTRO' }, // 魔王
   /* ファンキー2 (hitWait: hit終了→BB曲開始までの待ちms / mission: ミッション判定に使うver名)
      ※GetGrape14SP・LeverSPは未準備のため通常のGetGrape14・Leverを使用 */
-  FSP:    { hit: 'BBHITSP',    loop: 'BBSP',    fin: 'BBFINISHSP',    grape: 'GRAPE14', hitWait: 100, mission: 'SP' }, // 軍艦マーチ
+  FSP:    { hit: 'BBHITSP',    loop: 'BBSP',    fin: 'BBFINISHSP',    grape: 'GRAPE14', mission: 'SP' },               // 軍艦マーチ (hit→BB曲は間隔なし)
   FUNMEI: { hit: 'BBHITUNMEI', loop: 'BBUNMEI', fin: 'BBFINISHUNMEI', grape: 'GRAPE14', mission: 'UNMEI' },          // 運命
   FSTAR:  { hit: 'BBHITSTAR',  loop: 'BBSTAR',  fin: 'BBFINISHSTAR',  grape: 'GRAPE14' }                              // 星条旗よ永遠なれ
 };
@@ -957,8 +960,19 @@ function addWinBlink(spec) {
 }
 function stopWinBlink() {
   winBlinkToken++;
-  winBlinkCells.forEach(c => { c.classList.remove('win-blink'); c.querySelectorAll('.dim-ov').forEach(o => o.remove()); });
+  winBlinkCells.forEach(c => { c.classList.remove('win-blink', 'win-fast'); c.querySelectorAll('.dim-ov').forEach(o => o.remove()); });
   winBlinkCells = [];
+  winBlinkHoldLever = false;
+  const rw = $('reelWindow');
+  if (rw) rw.classList.remove('bb-dim');
+}
+/* [ファンキー2] BB(777)揃い: 777を高速点滅 + 周りの小役・白背景を暗く。BETでは止めず、レバーONで元に戻す */
+let winBlinkHoldLever = false;
+function startBBDim() {
+  if (!winBlinkCells.length) return;
+  winBlinkCells.forEach(c => c.classList.add('win-fast'));
+  $('reelWindow').classList.add('bb-dim');
+  winBlinkHoldLever = true;
 }
 function windowCol(reelIdx, pos) {
   const d = REEL_DATA[reelIdx];
@@ -1432,7 +1446,7 @@ function betCtActive() {
 }
 
 function addBet(n) {
-  if (state.gamePhase === 'idle') stopWinBlink(); // 1BETでも点滅終了
+  if (state.gamePhase === 'idle' && !winBlinkHoldLever) stopWinBlink(); // 1BETでも点滅終了 (ファンキー2の777はレバーONまで継続)
   /* 1BETボタンはボーナス中は使用不可(ボーナス中はMAXBETで2枚固定) */
   if (state.gamePhase !== 'idle' || state.replayPending || state.inBonus || state.betLock || state.payoutLock || state.xLock) return;
   const cap = betCapNow();
@@ -1450,7 +1464,7 @@ function addBet(n) {
 }
 
 function setMaxBet() {
-  if (state.gamePhase === 'idle') stopWinBlink(); // 777/77BARの点滅はMAXBETで終了
+  if (state.gamePhase === 'idle' && !winBlinkHoldLever) stopWinBlink(); // 777/77BARの点滅はMAXBETで終了 (ファンキー2の777はレバーONまで継続)
   if (state.gamePhase !== 'idle' || state.replayPending || state.betLock || state.payoutLock || state.xLock) return;
   /* ボーナス中=2枚固定 / GOGO中1BET設定=1枚 / 通常=3枚 */
   const max = betCapNow();
@@ -1619,7 +1633,7 @@ function startGame() {
       }
       /* 自然当選と同じ点灯抽選 (先ペカ15% / 後ペカ85%) */
       if (!state.lampLit) {
-        if (Math.random() < PEKA_FIRST) { lightLamp(); mSet('firstPeka'); }
+        if (!state.premStrongGogo && Math.random() < PEKA_FIRST) { lightLamp(false, true); mSet('firstPeka'); } // 強ガコッ!は後ペカのみ
         else state.lampPending = true;
       }
     }
@@ -1687,8 +1701,8 @@ function startGame() {
     /* GOGO!CHANCE 点灯タイミング抽選 (先ペカ15% / 後ペカ85%)
        ※レバーONファンファーレは0確なので、必ず先ペカ扱いにする */
     if (newBonus && !state.lampLit) {
-      if (state.premLeverFF || state.premInstant || (!state.premFreeze && Math.random() < PEKA_FIRST)) {
-        lightLamp(); // 先ペカ(レバーON時) → このゲームから揃えられる
+      if (state.premLeverFF || state.premInstant || (!state.premFreeze && !state.premStrongGogo && Math.random() < PEKA_FIRST)) { // 強ガコッ!は後ペカのみ
+        lightLamp(false, true); // 先ペカ(レバーON時) → このゲームから揃えられる
         mSet('firstPeka');
       } else {
         state.lampPending = true; // 後ペカ(第3停止ボタンを離した瞬間) → 次ゲームから揃えられる
@@ -1793,7 +1807,8 @@ function startFreeze() {
 }
 
 /* fade: 最後の停止ボタンを離した点灯なら true (ゴーゴー3は0.25秒フェード、アイムは常にパッと点灯) */
-function lightLamp(fade = false) {
+/* first: 先ペカ(レバーON時の点灯)なら true → gogoSndLateOnly の機種は無音・強ガコッ!なし */
+function lightLamp(fade = false, first = false) {
   clearLampFadeOut(); // 消灯フェード中に再点灯しても画像が消えないように
   state.lampLit = true;
   state.lampPending = false;
@@ -1803,13 +1818,19 @@ function lightLamp(fade = false) {
   const rb = !!(state.rareLamp && MACHINE.rainbow); // 中段チェリー時はレインボー(ゴーゴー3は無し)
   el.gogoLamp.classList.toggle('rainbow', rb);
   $('gogoImgRainbow').hidden = !rb; // CHANCE文字レインボー画像(GOGO2.png)
-  /* 強ガコッ!: 告知音をいつもより大きく鳴らすプレミア */
-  if (MACHINE.gogoSnd) audio.playSE('GOGO', true, state.premStrongGogo ? STRONG_GOGO_VOL : 1); // ゴーゴー3はペカ音なし
-  if (state.premStrongGogo) {
+  /* ペカ音: アイム・ファンキー2は後ペカのみ (先ペカは無音)。777ver(77GのBB)の先ペカは従来どおり鳴らす */
+  const xFirst = first && !state.inBonus && state.bonusFlag === 'BB' && pickBBVersion(state.bbWinG || 0) === 'X';
+  const gogoSnd = MACHINE.gogoSnd && (!first || !MACHINE.gogoSndLateOnly || xFirst);
+  /* 強ガコッ!: 告知音をいつもより大きく鳴らすプレミア (後ペカのみ) */
+  const strong = state.premStrongGogo && !first;
+  if (state.premStrongGogo && first) state.premStrongGogo = false; // レバーONファンファーレ等で先ペカになった時は出さない
+  if (gogoSnd) audio.playSE('GOGO', true, strong ? STRONG_GOGO_VOL : 1); // ゴーゴー3はペカ音なし
+  if (strong) {
+    mSet('premGako'); // ミッション: 実際に強ガコッ!が出た時だけ達成
     el.gogoLamp.classList.add('strong-gako');
     setTimeout(() => el.gogoLamp.classList.remove('strong-gako'), 900);
   }
-  state.gogoSndEnd = performance.now() + (MACHINE.gogoSnd && state.seOn ? audio.duration('GOGO', 1200) : 0);
+  state.gogoSndEnd = performance.now() + (gogoSnd && state.seOn ? audio.duration('GOGO', 1200) : 0);
   /* 777ver: 77G目のBB当選点灯なら、GOGO音停止の1秒後から煽りループ(GOGOCHANCE_X)を再生 */
   if (!state.inBonus && state.bonusFlag === 'BB' && pickBBVersion(state.bbWinG || 0) === 'X') {
     const wait = (state.seOn ? audio.duration('GOGO', 1200) : 0) + 100; // GOGO音停止の0.1秒後
@@ -1893,7 +1914,7 @@ function rollPremium(bonusType) {
   else if (isBB && Math.random() < PREM_SILENT) { state.premSilent = true; mSet('premSilent'); }
   if (isBB && Math.random() < PREM_TENPAI_MUJUN) { state.premTenpaiMujun = true; mSet('premMujun'); }
   /* 強ガコッ!はBB/RB共通 */
-  if (Math.random() < PREM_STRONG_GOGO) { state.premStrongGogo = true; mSet('premGako'); }
+  if (Math.random() < PREM_STRONG_GOGO) state.premStrongGogo = true; // ミッション達成は実際に出た時(lightLamp)
 }
 
 /* ===== 2確目(2リール確定目) の検出 =====
@@ -2614,6 +2635,7 @@ function startBonus(type) {
        hit停止前にBB系が鳴ることは構造上あり得ない */
     setBonusBlink('BB', true); /* hit音再生開始と同時に点滅開始 */
     startWinBlink(); // 777もBBhit系の再生開始と同時に点滅
+    if (MACHINE.bbBlinkDim) startBBDim(); // ファンキー2: 777高速点滅+周りを暗く (RBは通常の点滅)
     if (state.bonusVer === 'X') {
       xRunIntro(); /* 777ver: 専用の激アツ演出フロー */
     } else {
