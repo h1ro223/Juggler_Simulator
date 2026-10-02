@@ -26,6 +26,12 @@ html[data-machine="gogo"] {
   --panel-border: #3e0520;
   --reel-panel: linear-gradient(160deg, #a71a57 0%, #ca3677 30%, #8f134d 70%, #b62465 100%);
 }
+/* ファンキージャグラー2: フレームを黒より少し明るい黒に (実機は真っ黒。背景#101014と同化しないよう少し持ち上げる) */
+html[data-machine="funky2"] {
+  --panel-red: linear-gradient(160deg, #2c2c32 0%, #44444c 30%, #222227 70%, #37373e 100%);
+  --panel-red-deep: #18181c;
+  --panel-border: #55555e; /* 縁は明るめのグレーで背景との境目を出す */
+}
 
 /* デジタル7セグ風フォント (DSEG7 Modern Bold / ローカル同梱) */
 @font-face {

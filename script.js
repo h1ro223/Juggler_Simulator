@@ -59,6 +59,42 @@ const MACHINES = {
     lampFade: true,      // 後ペカは0.25秒かけてふわっと点灯
     lampFadeOut: 250,    // 777/77BARが揃った時、GOGOランプを0.25秒(ms)かけてフェード消灯
     rainbow: false       // レインボー点灯なし(GOGO2は使わない)
+  },
+  funky2: {
+    name: 'ファンキージャグラー2',
+    short: 'ファンキー2',
+    settings: [ // 本家ファンキージャグラー2準拠
+      { bb: 1/266.4, rb: 1/439.8, grape: 1/5.94 },
+      { bb: 1/259.0, rb: 1/407.1, grape: 1/5.92 },
+      { bb: 1/256.0, rb: 1/366.1, grape: 1/5.88 },
+      { bb: 1/249.2, rb: 1/322.8, grape: 1/5.83 },
+      { bb: 1/240.1, rb: 1/299.3, grape: 1/5.76 },
+      { bb: 1/219.9, rb: 1/262.1, grape: 1/5.67 }
+    ],
+    dirs: { reel: './FunJ/Reel/', gogo: './FunJ/GOGO/', se: './FunJ/SE/', bgm: './FunJ/BGM/', guide: './FunJ/Guide/', sp: './FunJ/SP/' },
+    saveSuffix: '_funky2',
+    bbLimit: 266,        // BB: COUNT280で終了 (ゴーゴー3と同じ)
+    bbSkipPay: 240,      // BB: 実際の獲得枚数
+    gogoSnd: false,      // ペカ音なし (※仮: 解析後に調整)
+    replaySplit: false,  // リプレイ音: アイムと同じ Replay1/2/3.mp3 一体型 (※仮)
+    bbHitWait: 0,        // BBhit1/2終了→BB曲開始までの待ち(ms) (※仮)
+    pekaFirst: 0.15,     // 先ペカの割合 (※仮: アイムと同じ)
+    lampFade: false,     // 後ペカはパッと点灯 (※仮)
+    lampFadeOut: 0,      // ボーナス図柄が揃った時は即消灯 (※仮)
+    rainbow: false,      // レインボー点灯なし
+    bbVersions: false,   // 楽曲バージョン(軍艦マーチ等)なし: 常に通常ver (※演出は後日)
+    premium: false,      // プレミア演出なし: 通常のペカ(先・後)のみ (※演出は後日)
+    /* 他機種と同名の素材のうち、この機種でも使うもの (FunJフォルダから読み込む) */
+    shareAssets: ['BB', 'REPLAY1', 'REPLAY2', 'REPLAY3'],
+    /* リール配列 (index0 = コマ21(上) → index20 = コマ01(下))
+       1=ブドウ 2=チェリー 3=ピエロ 4=ベル 5=リプレイ 6=BAR 7=7
+       ※左リール コマ13 の Cherry2 は「見た目だけ違うチェリー」(抽選・停止制御・配当はチェリー=2) */
+    reel: [
+      [1,5,1,7,3,1,5,1,2,6,1,5,1,4,7,5,1,5,1,6,2], // 左
+      [2,3,5,7,1,2,5,4,1,2,5,6,1,2,5,4,1,2,5,6,1], // 中
+      [4,5,1,7,6,4,5,1,3,4,5,1,3,4,5,1,3,4,5,1,3]  // 右
+    ],
+    reelImgOverride: [{ 8: 'C2' }, {}, {}] // 左リール index8 (コマ13) を Cherry2.png に
   }
 };
 const MACHINE_ID = (() => {
@@ -70,7 +106,7 @@ document.documentElement.dataset.machine = MACHINE_ID; // CSSのフレーム色�
 /* 素材パスを選択中の機種のフォルダに読み替える ('./SE/Bet.mp3' → dirs.se + 'Bet.mp3')
    './Reel/x.png' のような共通表記、または './ImJ/Reel/x.png' のような機種フォルダ表記のどちらでも読み替える */
 const DIR_MAP = { Reel: 'reel', GOGO: 'gogo', SE: 'se', BGM: 'bgm', Guide: 'guide', SP: 'sp' };
-const DIR_RE = /^\.\/(?:(?:ImJ|GoJ)\/)?(Reel|GOGO|SE|BGM|Guide|SP)\//;
+const DIR_RE = /^\.\/(?:(?:ImJ|GoJ|FunJ)\/)?(Reel|GOGO|SE|BGM|Guide|SP)\//;
 function mPath(p) {
   if (typeof p !== 'string') return p;
   const m = p.match(DIR_RE);
@@ -110,7 +146,8 @@ const REEL_IMG_ALT = {
 };
 mPathAll(SYM_IMG); mPathAll(REEL_IMG_ALT); // 機種別フォルダに読み替え
 /* リール別の差し替え位置 { index: 画像キー }  ※index0=窓の上段 */
-const REEL_IMG_OVERRIDE = [
+/* 機種に reelImgOverride があればそちらを使う (ファンキー2: 左index8) */
+const REEL_IMG_OVERRIDE = MACHINE.reelImgOverride || [
   { 16: 'C2' }, // 左リール index16 のチェリー
   {},           // 中
   {}            // 右
@@ -122,7 +159,8 @@ function reelImgKey(reelIdx, koma) {
 function reelImgSrc(key) { return SYM_IMG[key] || REEL_IMG_ALT[key]; }
 
 /* リール配列 (index0 = コマ21(上) → index20 = コマ01(下)) */
-const REEL_DATA = [
+/* 機種に reel があればそちらを使う (アイム/ゴーゴー3は共通配列、ファンキー2は専用配列) */
+const REEL_DATA = MACHINE.reel || [
   [4,7,5,1,5,1,6,2,1,5,1,7,3,1,5,1,2,6,1,5,1], // 左
   [5,7,1,2,5,4,1,2,5,6,1,2,5,4,1,2,5,6,1,2,3], // 中
   [1,7,6,4,5,1,3,4,5,1,3,4,5,1,3,4,5,1,3,4,5]  // 右
@@ -574,6 +612,7 @@ const BB_VERS = {
      これがないと BB0/RB0/総回転0 の状態で1G目や2〜5G目に当選しただけで
      軍艦マーチver・第九verが鳴ってしまう。 */
 function pickBBVersion(g) {
+  if (MACHINE.bbVersions === false) return 'NORMAL'; // ファンキー2: 楽曲バージョンなし(演出は後日)
   if (!state.hadBonus) return 'NORMAL'; // 初回ボーナスは必ず通常ver
   if (MACHINE_ID === 'gogo') {
     if (g === 1) return Math.random() < 0.75 ? 'GSP_A' : 'GSP_B';          // 軍艦マーチ 男性75% / 女性25%
@@ -609,7 +648,10 @@ const ASSET_OWNER = {};
 ['BB_A', 'BB_B', 'BBHITSP_A', 'BBSP_A', 'BBFINISHSP_A', 'BBHITSP_B', 'BBSP_B', 'BBFINISHSP_B',
  'BBHIT_SP1', 'BBSP1', 'BBFINISHSP1', 'BBHIT_SP2', 'BBSP2', 'BBFINISHSP2', 'BBSP2_INTRO', 'BBHIT_SP3', 'BBSP3', 'BBFINISHSP3', 'BBSP3_INTRO',
  'GRAPE14SP_A', 'GRAPE14SP_B', 'LEVERSP_A', 'LEVERSP_B', 'REPLAY'].forEach(k => { ASSET_OWNER[k] = 'gogo'; });
-function assetUsable(k) { return !ASSET_OWNER[k] || ASSET_OWNER[k] === MACHINE_ID; }
+function assetUsable(k) {
+  return !ASSET_OWNER[k] || ASSET_OWNER[k] === MACHINE_ID ||
+    (MACHINE.shareAssets || []).includes(k); // 他機種専用キーでも、この機種が同名素材を持つなら読み込む(ファンキー2)
+}
 
 const audio = {
   ctx: null, buffers: {}, seGain: null, bgmGain: null,
@@ -1818,6 +1860,7 @@ function clearPremium() {
 }
 function rollPremium(bonusType) {
   clearPremium();
+  if (MACHINE.premium === false) return; // ファンキー2: プレミアなし(通常のペカのみ・演出は後日)
   const isBB = bonusType === 'BB';
   /* ゴーゴー3: 専用プレミア4種 (すべてBB確定・1ゲームに1つだけ。強ガコッ等のアイム用は無し) */
   if (MACHINE_ID === 'gogo') {
@@ -3976,6 +4019,13 @@ function bindEvents() {
     { g: '魔王ver',       key: 'BBSP3_INTRO', name: 'BB中BGM イントロ (魔王)' },
     { g: '魔王ver',       key: 'BBSP3',       name: 'BB中BGM (魔王)' },
     { g: '魔王ver',       key: 'BBFINISHSP3', name: 'BB終了 (魔王)' },
+    { g: 'REGULAR BONUS', key: 'RB',       name: 'RB中BGM' }
+  ];
+  SR_LISTS.funky2 = [ // ファンキー2: 通常BBとRBのみ (演出・楽曲バージョンは後日)
+    { g: '通常ver',       key: 'BBHIT1',   name: 'BB当選ファンファーレ 1' },
+    { g: '通常ver',       key: 'BBHIT2',   name: 'BB当選ファンファーレ 2' },
+    { g: '通常ver',       key: 'BB',       name: 'BB中BGM' },
+    { g: '通常ver',       key: 'BBFINISH', name: 'BB終了' },
     { g: 'REGULAR BONUS', key: 'RB',       name: 'RB中BGM' }
   ];
   let srMachine = MACHINE_ID;                         // サウンドルームで表示中の機種
