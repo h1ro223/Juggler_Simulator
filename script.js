@@ -960,19 +960,30 @@ function addWinBlink(spec) {
 }
 function stopWinBlink() {
   winBlinkToken++;
-  winBlinkCells.forEach(c => { c.classList.remove('win-blink', 'win-fast'); c.querySelectorAll('.dim-ov').forEach(o => o.remove()); });
+  winBlinkCells.forEach(c => { c.classList.remove('win-blink', 'win-fast'); c.querySelectorAll('.dim-ov, .bb-ov').forEach(o => o.remove()); });
   winBlinkCells = [];
-  winBlinkHoldLever = false;
   const rw = $('reelWindow');
   if (rw) rw.classList.remove('bb-dim');
 }
-/* [ファンキー2] BB(777)揃い: 777を高速点滅 + 周りの小役・白背景を暗く。BETでは止めず、レバーONで元に戻す */
-let winBlinkHoldLever = false;
+/* [ファンキー2] BB(777)揃い: 777を高速点滅 + 周りの小役・白背景を暗く。BET(1BET/MAXBET)またはレバーONで元に戻す
+   揃った7のマスは「7だけ明るい⇔7だけ暗い」を、白背景を暗くした画像(SYM_BBDIM)で切り替える */
 function startBBDim() {
   if (!winBlinkCells.length) return;
-  winBlinkCells.forEach(c => c.classList.add('win-fast'));
+  winBlinkCells.forEach(c => {
+    c.classList.add('win-fast');
+    const im = c.querySelector('img');
+    const pair = im && SYM_BBDIM[im.dataset.img];
+    const ov = c.querySelector('.dim-ov');
+    if (!pair || !ov) return; // 画像の加工ができない環境(file://等)では白背景のまま点滅
+    const base = document.createElement('img'); // 下地: 明るい7 + 暗い白背景
+    base.className = 'bb-ov';
+    base.src = pair.on;
+    base.alt = '';
+    base.draggable = false;
+    c.insertBefore(base, ov);
+    ov.src = pair.off;                          // 点滅: 暗い7 + 暗い白背景
+  });
   $('reelWindow').classList.add('bb-dim');
-  winBlinkHoldLever = true;
 }
 function windowCol(reelIdx, pos) {
   const d = REEL_DATA[reelIdx];
@@ -1317,6 +1328,36 @@ const SYM_DIM = {};
 const WIN_DIM_K = 0.45;          // 暗さ (0=変化なし / 大きいほど暗い)
 const WIN_DIM_K_BY = { '1': 0.62 }; // 図柄ごとの暗さ (ブドウは暗め)
 const WIN_DIM_KEYS = ['7', '6', '1', '2', '3', '4', 'C2']; // 7・BAR・ブドウ・チェリー・ピエロ・ベル・チェリー(葉2枚)
+/* [ファンキー2] 777揃い中の暗転用: 7の「白背景だけ」を暗くした画像 { on: 明るい7, off: 暗い7 }
+   暗さは style.css の bb-dim (brightness(.38)) と揃える */
+const SYM_BBDIM = {};
+const BB_DIM_BRIGHT = 0.38;
+/* 画像の外周からつながる白っぽい所(=背景)だけを塗りつぶし判定。7の中の白いラインは黒フチで囲まれているので対象外 */
+function bgMaskOf(d, W, H) {
+  const mask = new Uint8Array(W * H), stack = [];
+  const isBg = p => { const i = p * 4, r = d[i], g = d[i + 1], b = d[i + 2], mn = Math.min(r, g, b);
+    return mn >= 160 && Math.max(r, g, b) - mn <= 40; };
+  const push = p => { if (!mask[p] && isBg(p)) { mask[p] = 1; stack.push(p); } };
+  for (let x = 0; x < W; x++) { push(x); push((H - 1) * W + x); }
+  for (let y = 0; y < H; y++) { push(y * W); push(y * W + W - 1); }
+  while (stack.length) {
+    const p = stack.pop(), x = p % W;
+    if (x > 0) push(p - 1);
+    if (x < W - 1) push(p + 1);
+    if (p >= W) push(p - W);
+    if (p < W * (H - 1)) push(p + W);
+  }
+  return mask;
+}
+function darkenBg(c, id, mask) {
+  const out = c.createImageData(id.width, id.height), s = id.data, o = out.data;
+  for (let p = 0, i = 0; i < s.length; p++, i += 4) {
+    const f = mask[p] ? BB_DIM_BRIGHT : 1;
+    o[i] = s[i] * f; o[i + 1] = s[i + 1] * f; o[i + 2] = s[i + 2] * f; o[i + 3] = 255;
+  }
+  c.putImageData(out, 0, 0);
+  return c.canvas.toDataURL('image/jpeg', 0.9);
+}
 function optimizeSymbolImages() {
   const W = 512, H = 188; // 1280:470 と同比率 (512*470/1280=188)
   const ALL_IMG = Object.assign({}, SYM_IMG, REEL_IMG_ALT); // 見た目差し替え用画像も最適化
@@ -1340,6 +1381,9 @@ function optimizeSymbolImages() {
         }
         c.putImageData(id, 0, 0);
         const url = cv.toDataURL('image/jpeg', 0.9); // 白背景・非透過なのでJPEGでOK
+        /* [ファンキー2] 7だけ: 白背景を暗くした「明るい7」(暗い7は下の暗化処理の後に作る) */
+        const bbMask = (MACHINE.bbBlinkDim && sym === '7') ? bgMaskOf(d, W, H) : null;
+        const bbOn = bbMask ? darkenBg(c, id, bbMask) : null;
         if (WIN_DIM_KEYS.includes(sym)) {
           for (let i = 0; i < d.length; i += 4) {
             const r = d[i], g = d[i + 1], b = d[i + 2];
@@ -1350,6 +1394,7 @@ function optimizeSymbolImages() {
           }
           c.putImageData(id, 0, 0);
           SYM_DIM[sym] = cv.toDataURL('image/jpeg', 0.9);
+          if (bbMask) SYM_BBDIM[sym] = { on: bbOn, off: darkenBg(c, id, bbMask) }; // 暗い7 + 暗い白背景
         }
         SYM_OPT[sym] = url;
         document.querySelectorAll('img[data-img="' + sym + '"]').forEach(im => { im.src = url; });
@@ -1446,7 +1491,7 @@ function betCtActive() {
 }
 
 function addBet(n) {
-  if (state.gamePhase === 'idle' && !winBlinkHoldLever) stopWinBlink(); // 1BETでも点滅終了 (ファンキー2の777はレバーONまで継続)
+  if (state.gamePhase === 'idle') stopWinBlink(); // 1BETでも点滅終了 (ファンキー2の777高速点滅・暗転もここで解除)
   /* 1BETボタンはボーナス中は使用不可(ボーナス中はMAXBETで2枚固定) */
   if (state.gamePhase !== 'idle' || state.replayPending || state.inBonus || state.betLock || state.payoutLock || state.xLock) return;
   const cap = betCapNow();
@@ -1464,7 +1509,7 @@ function addBet(n) {
 }
 
 function setMaxBet() {
-  if (state.gamePhase === 'idle' && !winBlinkHoldLever) stopWinBlink(); // 777/77BARの点滅はMAXBETで終了 (ファンキー2の777はレバーONまで継続)
+  if (state.gamePhase === 'idle') stopWinBlink(); // 777/77BARの点滅はMAXBETで終了 (ファンキー2の777高速点滅・暗転もここで解除)
   if (state.gamePhase !== 'idle' || state.replayPending || state.betLock || state.payoutLock || state.xLock) return;
   /* ボーナス中=2枚固定 / GOGO中1BET設定=1枚 / 通常=3枚 */
   const max = betCapNow();

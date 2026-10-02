@@ -311,7 +311,8 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 /* [ファンキー2] 777揃い: 高速点滅 (周期は html[data-machine="funky2"] の --bb-blink) */
 .cell.win-fast .dim-ov { animation-duration: var(--bb-blink, .4s); }
 /* [ファンキー2] 777揃い中は、揃った7以外の小役と白背景を暗く (レバーONで戻る) */
-#reelWindow.bb-dim .cell:not(.win-blink) { filter: brightness(.38); }
+#reelWindow.bb-dim .cell:not(.win-blink) { filter: brightness(.38); } /* 揃った7のマスは script.js の BB_DIM_BRIGHT(.38) で白背景だけ暗く */
+.cell .bb-ov { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
 #reelWindow.bb-dim .reel, #reelWindow.bb-dim .strip { background: #616161; } /* 小役の隙間 (白×0.38) */
 /* リール回転中のぼかしは目押し重視のため廃止 */
 .reel .shade {
