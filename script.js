@@ -1328,31 +1328,24 @@ const SYM_DIM = {};
 const WIN_DIM_K = 0.45;          // 暗さ (0=変化なし / 大きいほど暗い)
 const WIN_DIM_K_BY = { '1': 0.62 }; // 図柄ごとの暗さ (ブドウは暗め)
 const WIN_DIM_KEYS = ['7', '6', '1', '2', '3', '4', 'C2']; // 7・BAR・ブドウ・チェリー・ピエロ・ベル・チェリー(葉2枚)
-/* [ファンキー2] 777揃い中の暗転用: 7の「白背景だけ」を暗くした画像 { on: 明るい7, off: 暗い7 }
-   暗さは style.css の bb-dim (brightness(.38)) と揃える */
+/* [ファンキー2] 777揃い中の暗転用: 7の「白い所」(背景＋7の中の白いライン)を暗くした画像 { on: 明るい7, off: 暗い7 }
+   赤・黄・黒はそのまま(off は既存の暗化で赤・黄も暗い)。暗さは style.css の bb-dim (brightness(.38)) と揃える */
 const SYM_BBDIM = {};
 const BB_DIM_BRIGHT = 0.38;
-/* 画像の外周からつながる白っぽい所(=背景)だけを塗りつぶし判定。7の中の白いラインは黒フチで囲まれているので対象外 */
-function bgMaskOf(d, W, H) {
-  const mask = new Uint8Array(W * H), stack = [];
-  const isBg = p => { const i = p * 4, r = d[i], g = d[i + 1], b = d[i + 2], mn = Math.min(r, g, b);
-    return mn >= 160 && Math.max(r, g, b) - mn <= 40; };
-  const push = p => { if (!mask[p] && isBg(p)) { mask[p] = 1; stack.push(p); } };
-  for (let x = 0; x < W; x++) { push(x); push((H - 1) * W + x); }
-  for (let y = 0; y < H; y++) { push(y * W); push(y * W + W - 1); }
-  while (stack.length) {
-    const p = stack.pop(), x = p % W;
-    if (x > 0) push(p - 1);
-    if (x < W - 1) push(p + 1);
-    if (p >= W) push(p - W);
-    if (p < W * (H - 1)) push(p + W);
+/* 白っぽさ(0〜1): 一番暗いチャンネルが明るいほど白に近い。
+   白=1 / 赤・黄・黒=0 / 白とのフチ(なめらかな境目)は中間 → 境目に白いスジが残らない */
+function whiteWeightOf(d) {
+  const w = new Float32Array(d.length / 4);
+  for (let p = 0, i = 0; i < d.length; p++, i += 4) {
+    const mn = Math.min(d[i], d[i + 1], d[i + 2]);
+    w[p] = Math.max(0, Math.min(1, (mn - 90) / 140));
   }
-  return mask;
+  return w;
 }
-function darkenBg(c, id, mask) {
+function darkenWhite(c, id, w) {
   const out = c.createImageData(id.width, id.height), s = id.data, o = out.data;
   for (let p = 0, i = 0; i < s.length; p++, i += 4) {
-    const f = mask[p] ? BB_DIM_BRIGHT : 1;
+    const f = 1 - (1 - BB_DIM_BRIGHT) * w[p];
     o[i] = s[i] * f; o[i + 1] = s[i + 1] * f; o[i + 2] = s[i + 2] * f; o[i + 3] = 255;
   }
   c.putImageData(out, 0, 0);
@@ -1381,9 +1374,9 @@ function optimizeSymbolImages() {
         }
         c.putImageData(id, 0, 0);
         const url = cv.toDataURL('image/jpeg', 0.9); // 白背景・非透過なのでJPEGでOK
-        /* [ファンキー2] 7だけ: 白背景を暗くした「明るい7」(暗い7は下の暗化処理の後に作る) */
-        const bbMask = (MACHINE.bbBlinkDim && sym === '7') ? bgMaskOf(d, W, H) : null;
-        const bbOn = bbMask ? darkenBg(c, id, bbMask) : null;
+        /* [ファンキー2] 7だけ: 白い所(背景＋7の中の白ライン)を暗くした「明るい7」(暗い7は下の暗化処理の後に作る) */
+        const bbW = (MACHINE.bbBlinkDim && sym === '7') ? whiteWeightOf(d) : null;
+        const bbOn = bbW ? darkenWhite(c, id, bbW) : null;
         if (WIN_DIM_KEYS.includes(sym)) {
           for (let i = 0; i < d.length; i += 4) {
             const r = d[i], g = d[i + 1], b = d[i + 2];
@@ -1394,7 +1387,7 @@ function optimizeSymbolImages() {
           }
           c.putImageData(id, 0, 0);
           SYM_DIM[sym] = cv.toDataURL('image/jpeg', 0.9);
-          if (bbMask) SYM_BBDIM[sym] = { on: bbOn, off: darkenBg(c, id, bbMask) }; // 暗い7 + 暗い白背景
+          if (bbW) SYM_BBDIM[sym] = { on: bbOn, off: darkenWhite(c, id, bbW) }; // 暗い7 + 暗い白(背景・中の白ライン)
         }
         SYM_OPT[sym] = url;
         document.querySelectorAll('img[data-img="' + sym + '"]').forEach(im => { im.src = url; });
