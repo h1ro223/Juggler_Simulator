@@ -85,7 +85,7 @@ const MACHINES = {
     lampFade: false,     // 後ペカはパッと点灯 (※仮)
     lampFadeOut: 0,      // ボーナス図柄が揃った時は即消灯 (※仮)
     rainbow: false,      // レインボー点灯なし
-    zoroStar: false,     // 星条旗verの準備ができたら true に (ゾロ目BBで 運命/星条旗 を50%ずつ。false=運命100%)
+    zoroStar: true,      // 星条旗ver有効 (ゾロ目BBで 運命/星条旗 を50%ずつ。false=運命100%)
     premium: false,      // プレミア演出なし: 通常のペカ(先・後)のみ (※演出は後日)
     /* 他機種と同名の素材のうち、この機種でも使うもの (FunJフォルダから読み込む) */
     shareAssets: ['BB_A', 'BB_B', 'BBHITSP', 'BBSP', 'BBFINISHSP', 'BBHITUNMEI', 'BBUNMEI', 'BBFINISHUNMEI', 'GOGO'],
@@ -613,7 +613,7 @@ const BB_VERS = {
      ※GetGrape14SP・LeverSPは未準備のため通常のGetGrape14・Leverを使用 */
   FSP:    { hit: 'BBHITSP',    loop: 'BBSP',    fin: 'BBFINISHSP',    grape: 'GRAPE14', mission: 'SP' },               // 軍艦マーチ (hit→BB曲は間隔なし)
   FUNMEI: { hit: 'BBHITUNMEI', loop: 'BBUNMEI', fin: 'BBFINISHUNMEI', grape: 'GRAPE14', mission: 'UNMEI' },          // 運命
-  FSTAR:  { hit: 'BBHITSTAR',  loop: 'BBSTAR',  fin: 'BBFINISHSTAR',  grape: 'GRAPE14' }                              // 星条旗よ永遠なれ
+  FSTAR:  { hit: 'BBHITSTAR',  loop: 'BBSTAR',  fin: 'BBFINISHSTAR',  grape: 'GRAPE14' }                              // 星条旗よ永遠なれ (hit→BB曲は間隔なし)
 };
 
 /* BB当選時のG数(前回ボーナス終了から)で楽曲バージョンを決定
