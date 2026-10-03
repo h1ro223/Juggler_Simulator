@@ -1328,8 +1328,9 @@ const SYM_DIM = {};
 const WIN_DIM_K = 0.45;          // 暗さ (0=変化なし / 大きいほど暗い)
 const WIN_DIM_K_BY = { '1': 0.62 }; // 図柄ごとの暗さ (ブドウは暗め)
 const WIN_DIM_KEYS = ['7', '6', '1', '2', '3', '4', 'C2']; // 7・BAR・ブドウ・チェリー・ピエロ・ベル・チェリー(葉2枚)
-/* [ファンキー2] 777揃い中の暗転用: 7の「白い所」(背景＋7の中の白いライン)を暗くした画像 { on: 明るい7, off: 暗い7 }
-   赤・黄・黒はそのまま(off は既存の暗化で赤・黄も暗い)。暗さは style.css の bb-dim (brightness(.38)) と揃える */
+/* [ファンキー2] 777揃い中の暗転用画像 { on: 明るい7, off: 暗い7 }。暗さは style.css の bb-dim (brightness(.38)) と揃える
+   on : 外側の白い背景だけ暗く → 7の赤・黄・中の白いライン(上の帯・星の左上など)は光ったまま
+   off: 白い所すべて(背景＋7の中の白いライン)を暗く ＋ 既存の暗化で赤・黄も暗く */
 const SYM_BBDIM = {};
 const BB_DIM_BRIGHT = 0.38;
 /* 白っぽさ(0〜1): 一番暗いチャンネルが明るいほど白に近い。
@@ -1341,6 +1342,30 @@ function whiteWeightOf(d) {
     w[p] = Math.max(0, Math.min(1, (mn - 90) / 140));
   }
   return w;
+}
+/* 画像の外周からつながる白っぽい所(=背景)の判定。7の中の白いラインは黒フチで囲まれているので対象外。
+   背景と黒フチの境目(なめらかな部分)も暗くするため、判定を1px広げる */
+function bgMaskOf(d, W, H) {
+  const mask = new Uint8Array(W * H), stack = [];
+  const isBg = p => { const i = p * 4, r = d[i], g = d[i + 1], b = d[i + 2], mn = Math.min(r, g, b);
+    return mn >= 160 && Math.max(r, g, b) - mn <= 40; };
+  const push = p => { if (!mask[p] && isBg(p)) { mask[p] = 1; stack.push(p); } };
+  for (let x = 0; x < W; x++) { push(x); push((H - 1) * W + x); }
+  for (let y = 0; y < H; y++) { push(y * W); push(y * W + W - 1); }
+  while (stack.length) {
+    const p = stack.pop(), x = p % W;
+    if (x > 0) push(p - 1);
+    if (x < W - 1) push(p + 1);
+    if (p >= W) push(p - W);
+    if (p < W * (H - 1)) push(p + W);
+  }
+  const out = new Uint8Array(mask); // 1px 広げる
+  for (let p = 0; p < mask.length; p++) {
+    if (mask[p]) continue;
+    const x = p % W;
+    if ((x > 0 && mask[p - 1]) || (x < W - 1 && mask[p + 1]) || (p >= W && mask[p - W]) || (p < W * (H - 1) && mask[p + W])) out[p] = 1;
+  }
+  return out;
 }
 function darkenWhite(c, id, w) {
   const out = c.createImageData(id.width, id.height), s = id.data, o = out.data;
@@ -1374,9 +1399,14 @@ function optimizeSymbolImages() {
         }
         c.putImageData(id, 0, 0);
         const url = cv.toDataURL('image/jpeg', 0.9); // 白背景・非透過なのでJPEGでOK
-        /* [ファンキー2] 7だけ: 白い所(背景＋7の中の白ライン)を暗くした「明るい7」(暗い7は下の暗化処理の後に作る) */
+        /* [ファンキー2] 7だけ: 外側の白い背景だけ暗くした「明るい7」(中の白いラインは光ったまま)。暗い7は下の暗化処理の後に作る */
         const bbW = (MACHINE.bbBlinkDim && sym === '7') ? whiteWeightOf(d) : null;
-        const bbOn = bbW ? darkenWhite(c, id, bbW) : null;
+        let bbOn = null;
+        if (bbW) {
+          const bg = bgMaskOf(d, W, H), wOn = new Float32Array(bbW.length);
+          for (let p = 0; p < bbW.length; p++) wOn[p] = bg[p] ? bbW[p] : 0;
+          bbOn = darkenWhite(c, id, wOn);
+        }
         if (WIN_DIM_KEYS.includes(sym)) {
           for (let i = 0; i < d.length; i += 4) {
             const r = d[i], g = d[i + 1], b = d[i + 2];
