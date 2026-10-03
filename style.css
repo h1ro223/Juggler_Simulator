@@ -631,6 +631,30 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 .custom-btns .gold-btn { flex: 1.2; margin: 0; }
 .custom-btns .sub-close { flex: 1; margin-top: 0; }
 
+/* ================= プレミア設定 (台設定) ================= */
+.peka-row { display: flex; gap: 8px; margin-top: 8px; }
+.peka-row .gold-btn { margin-top: 0; padding: 9px 6px; font-size: 12px; line-height: 1.35; }
+.peka-row #btnForcePeka { flex: 1.7; min-width: 0; }
+.peka-row .prem-btn { flex: 1; min-width: 0; }
+.prem-btn small {
+  display: block; font-size: 9px; font-weight: normal; margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.prem-btn.picked { /* プレミアを選択中 (ランダム抽選以外) */
+  background: linear-gradient(180deg, #b47cff, #6a2fc2); color: #fff; border-color: #d6b8ff;
+  box-shadow: 0 0 10px rgba(180,124,255,.55);
+}
+.prem-row {
+  display: flex; align-items: flex-start; gap: 10px; padding: 9px 10px; margin-bottom: 6px;
+  border: 1px solid #3c3c46; border-radius: 9px; background: #1d1d24; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.prem-row.sel { border-color: var(--gold); background: #2a2516; }
+.prem-row input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: #ffb62e; cursor: pointer; }
+.prem-row .p-name { display: block; font-size: 13px; font-weight: bold; color: #eee; }
+.prem-row.sel .p-name { color: var(--gold); }
+.prem-row .p-desc { display: block; font-size: 10px; color: #99a; margin-top: 2px; line-height: 1.5; }
+
 .io-btns { display: flex; gap: 8px; }
 .io-btns .gold-btn { flex: 1; margin: 0; }
 .io-btns .gold-btn small { display: block; font-size: 9px; font-weight: normal; margin-top: 2px; }

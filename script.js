@@ -289,6 +289,30 @@ const PREM_G_STOP_DOUBLE = 0.010;  // 第1停止音ダブり
 const PREM_G_FREEZE      = 0.0025; // 3秒フリーズ
 const PREM_G_INSTANT     = 0.015;  // 即点灯 (ゴーゴー3の即ペカ)
 const PREM_G_LEVER_MUTE  = 0.010;  // スタート音無音
+
+/* ===== プレミア設定 (台設定のラジオボタン) =====
+   「次ゲームでGOGO!CHANCE点灯」ボタンで点灯させた時だけ反映する(5回タップ・隠しコマンドは対象外)。
+   ・'random'(ランダム抽選) … BB/RBどちらかが成立し、プレミアは自然当選と同じ確率で抽選
+   ・プレミアを選択      … BB確定 + 選んだプレミアだけを1回出す → 出たら 'random' に戻る
+   ・保存しない(リロードで 'random')。この機能経由のプレミアはミッションに数えない(premNoMission)
+   ・flag = 立てる state のプレミアフラグ名。機種にプレミアが無い(premium:false)時は空リスト */
+const PREM_PICKS = {
+  aime: [
+    { k: 'silent',  flag: 'premSilent',      name: '無音',                 desc: 'レバーON〜第3停止まで、レバー音と停止音が鳴らない' },
+    { k: 'leverFF', flag: 'premLeverFF',     name: 'レバーONファンファーレ', desc: 'レバーを叩いた瞬間に当選音が鳴る (必ず先ペカ)' },
+    { k: 'gako',    flag: 'premStrongGogo',  name: '強ガコッ!',            desc: '告知音がいつもより大きい (必ず後ペカ)' },
+    { k: 'mujun',   flag: 'premTenpaiMujun', name: 'テンパイ音矛盾',        desc: '赤7・BARのテンパイ音が逆になる (テンパイしないと分からない)' }
+  ],
+  gogo: [
+    { k: 'stopDouble', flag: 'premStopDouble', name: '第1停止音ダブり', desc: '第1停止で停止音が2回鳴る' },
+    { k: 'freeze',     flag: 'premFreeze',     name: '3秒フリーズ',     desc: '最後の停止ボタンを離すと3秒フリーズ → 点灯' },
+    { k: 'instant',    flag: 'premInstant',    name: '即点灯',          desc: 'レバーONの瞬間にGOGO!CHANCEが点灯' },
+    { k: 'leverMute',  flag: 'premLeverMute',  name: 'スタート音無音',   desc: 'レバー音だけが鳴らない (停止音は鳴る)' }
+  ]
+};
+let premPick = 'random'; // 現在の選択 (保存しない)
+function premPickList() { return MACHINE.premium === false ? [] : (PREM_PICKS[MACHINE_ID] || []); }
+function premPickItem() { return premPick === 'random' ? null : (premPickList().find(p => p.k === premPick) || null); }
 const STOP_DOUBLE_MS = 50;         // 第1停止音ダブりの2回目までの間隔(ms) ※要調整
 const FREEZE_MS      = 3000;       // 3秒フリーズの長さ(ms)
 const BB_LIMIT   = MACHINE.bbLimit; // BB: 機種別 (アイム280 / ゴーゴー3 266) を超える払い出しで終了
@@ -527,6 +551,7 @@ const state = {
   bonusLog: [],        // 全ボーナス履歴 [{t:'BB'|'RB', g:スタートG数}] 古い順。データリセットで消える
   kaishuYen: 0,        // 回収額(精算で円に変換した合計)
   forceBonus: false,   // 次ゲームでGOGO!CHANCE点灯(1回)
+  forceByBtn: false,   // forceBonusを台設定のボタンで予約したか (プレミア設定の反映対象)
   lampTapArmed: false, // GOGOランプ5回タップ→このゲームでペカ確定(レバー時に判定)
   stopHeld: false,     // 第3停止ボタンを押し込んだまま(離すまでボーナス突入を保留)
   /* --- プレミア演出 (そのゲーム限り。レバーONで毎回リセット) --- */
@@ -538,6 +563,7 @@ const state = {
   premFreeze: false,     // [ゴーゴー3] 第3停止離しで3秒フリーズ→点灯
   premInstant: false,    // [ゴーゴー3] 即点灯(レバーONで点灯)
   premLeverMute: false,  // [ゴーゴー3] スタート音(Lever.mp3)無音
+  premNoMission: false,  // プレミア設定(台設定のボタン)経由のプレミア → ミッションに数えない
   freezeLock: false,     // 3秒フリーズ中(全操作無効・グレーアウト)
   twoKakuShown: false, // このゲームで2確目の告知を既に出したか(二重表示防止)
   pendingBonus: null,  // 停止ボタンを離すまで待たせているボーナス種別 'BB'|'RB'
@@ -1707,17 +1733,30 @@ function startGame() {
     /* 「ペカ確定」(メニュー/隠しコマンド): 確率無視でボーナスフラグ確定 */
     if (state.forceBonus && !taMode) {
       const rare = state.forceBonus === 'rare';
+      const byBtn = state.forceByBtn && state.forceBonus === true; // 台設定のボタンで予約 (5回タップ・隠しコマンドは対象外)
       state.forceBonus = false;
+      state.forceByBtn = false;
       if (rare && !state.bonusFlag) {
         state.bonusFlag = 'BB'; // レインボー=中段チェリー=BB確定
         rareHit = true;
       } else if (!state.bonusFlag) {
-        const ratio = sp.bb / (sp.bb + sp.rb);
-        state.bonusFlag = Math.random() < ratio ? 'BB' : 'RB';
+        const pick = byBtn ? premPickItem() : null; // プレミア設定で選んだプレミア (null=ランダム抽選)
+        if (pick) {
+          state.bonusFlag = 'BB'; // プレミアはBB確定 (RBにはならない)
+        } else {
+          const ratio = sp.bb / (sp.bb + sp.rb);
+          state.bonusFlag = Math.random() < ratio ? 'BB' : 'RB';
+        }
+        /* プレミア設定: 選んだプレミアを確定で出す / ランダム抽選なら自然当選と同じ確率で抽選 (どちらもミッション対象外) */
+        if (byBtn) {
+          rollPremium(state.bonusFlag, { pick, noMission: true });
+          if (pick) setPremPick('random'); // 1回出したら「ランダム抽選」に戻る
+        }
       }
-      /* 自然当選と同じ点灯抽選 (先ペカ15% / 後ペカ85%) */
+      /* 自然当選と同じ点灯抽選 (先ペカ15% / 後ペカ85%)
+         ※プレミアの点灯タイミングも自然当選と同じ: ファンファーレ・即点灯=先ペカ / フリーズ・強ガコッ!=後ペカ */
       if (!state.lampLit) {
-        if (!state.premStrongGogo && Math.random() < PEKA_FIRST) { lightLamp(false, true); mSet('firstPeka'); } // 強ガコッ!は後ペカのみ
+        if (state.premLeverFF || state.premInstant || (!state.premFreeze && !state.premStrongGogo && Math.random() < PEKA_FIRST)) { lightLamp(false, true); mSet('firstPeka'); }
         else state.lampPending = true;
       }
     }
@@ -1910,7 +1949,7 @@ function lightLamp(fade = false, first = false) {
   if (state.premStrongGogo && first) state.premStrongGogo = false; // レバーONファンファーレ等で先ペカになった時は出さない
   if (gogoSnd) audio.playSE('GOGO', true, strong ? STRONG_GOGO_VOL : 1); // ゴーゴー3はペカ音なし
   if (strong) {
-    mSet('premGako'); // ミッション: 実際に強ガコッ!が出た時だけ達成
+    if (!state.premNoMission) mSet('premGako'); // ミッション: 実際に強ガコッ!が出た時だけ達成 (プレミア設定経由は除く)
     el.gogoLamp.classList.add('strong-gako');
     setTimeout(() => el.gogoLamp.classList.remove('strong-gako'), 900);
   }
@@ -1977,10 +2016,16 @@ function clearPremium() {
   state.premFreeze = false;
   state.premInstant = false;
   state.premLeverMute = false;
+  state.premNoMission = false;
 }
-function rollPremium(bonusType) {
+function rollPremium(bonusType, opt) {
   clearPremium();
   if (MACHINE.premium === false) return; // ファンキー2: プレミアなし(通常のペカのみ・演出は後日)
+  opt = opt || {};
+  state.premNoMission = !!opt.noMission; // プレミア設定(台設定のボタン)経由はミッションに数えない
+  const mPrem = k => { if (!state.premNoMission) mSet(k); };
+  /* プレミア設定で選んだプレミア: それだけを確定で出す (他のプレミアは抽選しない) */
+  if (opt.pick) { state[opt.pick.flag] = true; return; }
   const isBB = bonusType === 'BB';
   /* ゴーゴー3: 専用プレミア4種 (すべてBB確定・1ゲームに1つだけ。強ガコッ等のアイム用は無し) */
   if (MACHINE_ID === 'gogo') {
@@ -1994,9 +2039,9 @@ function rollPremium(bonusType) {
     return;
   }
   /* 無音・レバーONファンファーレ・テンパイ音矛盾はBB確定のプレミア */
-  if (isBB && Math.random() < PREM_LEVER_FF) { state.premLeverFF = true; mSet('premLeverFF'); }
-  else if (isBB && Math.random() < PREM_SILENT) { state.premSilent = true; mSet('premSilent'); }
-  if (isBB && Math.random() < PREM_TENPAI_MUJUN) { state.premTenpaiMujun = true; mSet('premMujun'); }
+  if (isBB && Math.random() < PREM_LEVER_FF) { state.premLeverFF = true; mPrem('premLeverFF'); }
+  else if (isBB && Math.random() < PREM_SILENT) { state.premSilent = true; mPrem('premSilent'); }
+  if (isBB && Math.random() < PREM_TENPAI_MUJUN) { state.premTenpaiMujun = true; mPrem('premMujun'); }
   /* 強ガコッ!はBB/RB共通 */
   if (Math.random() < PREM_STRONG_GOGO) state.premStrongGogo = true; // ミッション達成は実際に出た時(lightLamp)
 }
@@ -2403,6 +2448,7 @@ function taStart() {
   state.setting = 6;               // 小役は設定6の確率
   state.autoMode = false;
   state.forceBonus = false;
+  state.forceByBtn = false;
   unlightLamp();
   state.bonusFlag = null;
   state.smallFlag = null;
@@ -3349,7 +3395,7 @@ function resetAll() {
     history: [], pendingHist: null, bonusLog: [], betLock: false, bbHitPlaying: false, payoutLock: false,
     stopHeld: false, pendingBonus: null, ta: null,
     bbWinG: 0, bonusVer: 'NORMAL', bonusCountHold: false, bonusCountFinal: 0,
-    rareLamp: false, kaishuYen: 0, forceBonus: false, customProb: null, xMode: 0, x2Started: false, xLock: false, seMuteX: false,
+    rareLamp: false, kaishuYen: 0, forceBonus: false, forceByBtn: false, customProb: null, xMode: 0, x2Started: false, xLock: false, seMuteX: false,
     challenge: null, challengeStats: { played: 0, correct: 0 }, dataMode: false, diffLog: [], diffBase: 0, graphMinG: 1000,
     hadBonus: false, prevBonusType: null, renChain: 0,
     counts: { bb: 0, rb: 0, total: 0, start: 0 }
@@ -3449,7 +3495,51 @@ function skipBonus() {
 
 /* GOGOランプのタップ回数 (レバーを引くたびにリセット) */
 let lampTapCount = 0;
+/* プレミア設定ボタンの表示 (選択中の名前・TA/判別チャレンジ中は無効) */
+function refreshPremBtn() {
+  const b = $('btnPremSet');
+  if (!b) return;
+  const it = premPickItem();
+  b.classList.toggle('picked', !!it);
+  $('premPickLabel').textContent = !premPickList().length ? 'この機種はなし' : (it ? it.name : 'ランダム抽選');
+  b.disabled = taActive() || !!(state.challenge && state.challenge.active);
+}
+/* プレミア設定のラジオボタン一覧 (今遊んでいる機種のプレミアのみ) */
+function buildPremRows() {
+  const box = $('premRows');
+  if (!box) return;
+  const items = [{ k: 'random', name: 'ランダム抽選', desc: 'BB/RBのどちらかが成立。プレミアは通常と同じ確率で抽選' }]
+    .concat(premPickList().map(p => ({ k: p.k, name: p.name, desc: 'BB確定 / ' + p.desc })));
+  box.textContent = '';
+  items.forEach(p => {
+    const lab = document.createElement('label');
+    lab.className = 'prem-row' + (p.k === premPick ? ' sel' : '');
+    const r = document.createElement('input');
+    r.type = 'radio'; r.name = 'premPick'; r.value = p.k; r.checked = p.k === premPick;
+    r.addEventListener('change', () => { if (r.checked) setPremPick(p.k, true); });
+    const txt = document.createElement('span');
+    const n = document.createElement('span'); n.className = 'p-name'; n.textContent = p.name;
+    const d = document.createElement('span'); d.className = 'p-desc'; d.textContent = p.desc;
+    txt.append(n, d);
+    lab.append(r, txt);
+    box.appendChild(lab);
+  });
+}
+function setPremPick(k, byUser) {
+  premPick = premPickList().some(p => p.k === k) ? k : 'random';
+  refreshPremBtn();
+  document.querySelectorAll('#premRows .prem-row').forEach(l => {
+    const r = l.querySelector('input');
+    r.checked = r.value === premPick;
+    l.classList.toggle('sel', r.checked);
+  });
+  if (byUser) {
+    const it = premPickItem();
+    message(it ? `プレミア設定: ${it.name} (「次ゲームでGOGO!CHANCE点灯」で発生)` : 'プレミア設定: ランダム抽選');
+  }
+}
 function refreshPekaBtn() {
+  refreshPremBtn();
   /* 目押しTA中はGOGO確定ボタンを使わせない */
   if (taActive()) {
     const b0 = $('btnForcePeka');
@@ -3487,6 +3577,7 @@ function closeSubOverlays() {
   $('machineOverlay').hidden = true;
   $('systemOverlay').hidden = true;
   $('customOverlay').hidden = true;
+  $('premOverlay').hidden = true;
   $('challengeOverlay').hidden = true;
   $('missionOverlay').hidden = true;
   $('resetOverlay').hidden = true;
@@ -3694,9 +3785,21 @@ function bindEvents() {
   el.gogoLamp.addEventListener('pointerdown', () => { lampTapCount++; });
   el.btnForcePeka.addEventListener('click', () => {
     state.forceBonus = !state.forceBonus;
+    state.forceByBtn = !!state.forceBonus; // プレミア設定はこのボタンで予約した時だけ反映
     refreshPekaBtn();
-    if (state.forceBonus) message('次のゲームでGOGO!CHANCE確定!');
+    if (state.forceBonus) {
+      const it = premPickItem();
+      message(it ? `次のゲームでGOGO!CHANCE確定! (プレミア: ${it.name})` : '次のゲームでGOGO!CHANCE確定!');
+    }
   });
+  /* --- プレミア設定 (ラジオボタン) --- */
+  $('btnPremSet').addEventListener('click', () => {
+    if (!premPickList().length) { askConfirm('この機種にプレミアはありません。', null, true); return; }
+    buildPremRows();
+    $('premOverlay').hidden = false;
+  });
+  $('btnClosePrem').addEventListener('click', () => { $('premOverlay').hidden = true; });
+  $('premOverlay').addEventListener('click', e => { if (e.target === $('premOverlay')) $('premOverlay').hidden = true; });
   /* サウンド操作は♪ポップアップ(無印ID)とシステム設定(2付きID)の両方から可能 */
   ['chkBgm', 'chkBgm2'].forEach(id => $(id).addEventListener('change', e => applyBgmToggle(e.target.checked)));
   ['chkSe', 'chkSe2'].forEach(id => $(id).addEventListener('change', e => applySeToggle(e.target.checked)));

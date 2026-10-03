@@ -201,7 +201,10 @@
           <button class="speed-btn" data-v="0.5">×0.5</button>
           <button class="speed-btn" data-v="1">×1.0</button>
         </div>
-        <button class="gold-btn" id="btnForcePeka">次ゲームでGOGO!CHANCE点灯</button>
+        <div class="peka-row">
+          <button class="gold-btn" id="btnForcePeka">次ゲームでGOGO!CHANCE点灯</button>
+          <button class="gold-btn prem-btn" id="btnPremSet">プレミア設定<small id="premPickLabel">ランダム抽選</small></button>
+        </div>
         <div class="startg-row">
           <span>スタートG数<small>(777ver検証用)</small></span>
           <input type="number" id="inStartG" min="0" max="9999" step="1" value="0">
@@ -410,6 +413,16 @@
         <button class="sub-close" id="btnCustomOff">解除(通常設定に戻す)</button>
       </div>
       <button class="sub-close" id="btnCloseCustom">閉じる</button>
+    </div>
+  </div>
+
+  <!-- ▼ プレミア設定ポップアップ (台設定) ▼ -->
+  <div id="premOverlay" class="sub-overlay" hidden>
+    <div id="premModal" class="sub-modal">
+      <h2>プレミア設定</h2>
+      <p class="custom-note">「次ゲームでGOGO!CHANCE点灯」で点灯させた時に出すプレミアを選べます。<br>プレミアを選んだ場合はBB確定で1回だけ発生し、その後は「ランダム抽選」に戻ります。<br>※この機能で出たプレミアはミッションに数えません。リロードすると「ランダム抽選」に戻ります。</p>
+      <div id="premRows"></div>
+      <button class="sub-close" id="btnClosePrem">閉じる</button>
     </div>
   </div>
 
