@@ -1329,14 +1329,14 @@ const WIN_DIM_K = 0.45;          // 暗さ (0=変化なし / 大きいほど暗�
 const WIN_DIM_K_BY = { '1': 0.62 }; // 図柄ごとの暗さ (ブドウは暗め)
 const WIN_DIM_KEYS = ['7', '6', '1', '2', '3', '4', 'C2']; // 7・BAR・ブドウ・チェリー・ピエロ・ベル・チェリー(葉2枚)
 /* [ファンキー2] 777揃い中の暗転用画像 { on: 明るい7, off: 暗い7 }。暗さは style.css の bb-dim (brightness(.38)) と揃える
-   on : 7の赤・黄 ＋ 下の BB_GLOW_SEEDS の白いライン だけ光る。背景・それ以外の白は暗く
+   on : 外側の白い背景 ＋ 下の BB_DARK_SEEDS の白いライン だけ暗く。7の赤・黄・それ以外の白は光る
    off: 白い所すべて(背景＋7の中の白いライン)を暗く ＋ 既存の暗化で赤・黄も暗く */
 const SYM_BBDIM = {};
 const BB_DIM_BRIGHT = 0.38;
-/* 点灯の瞬間に光らせる「7の中の白いライン」の位置 (7.png内の割合 [横, 縦])
-   [0.609, 0.479] = 星の左の白いライン / [0.168, 0.58] = その左上(7の上の赤の下)の白いライン
-   ※光らせる場所を増やす時は、ここに位置を足す */
-const BB_GLOW_SEEDS = [[0.609, 0.479], [0.168, 0.58]];
+/* 点灯の瞬間も暗くする「7の中の白いライン」の位置 (7.png内の割合 [横, 縦])
+   [0.168, 0.58] = 7の上の赤い帯のすぐ下・左側の三日月形の白
+   ※暗くする場所を増やす時は、ここに位置を足す */
+const BB_DARK_SEEDS = [[0.168, 0.58]];
 /* 白っぽさ(0〜1): 一番暗いチャンネルが明るいほど白に近い。
    白=1 / 赤・黄・黒=0 / 白とのフチ(なめらかな境目)は中間 → 境目に白いスジが残らない */
 function whiteWeightOf(d) {
@@ -1347,13 +1347,18 @@ function whiteWeightOf(d) {
   }
   return w;
 }
-/* 指定した位置から、黒フチで区切られた「ひとつながりの白い所」を判定 (光らせる白いライン用)。
-   白と黒フチの境目(なめらかな部分)も光らせるため、判定を1px広げる */
-function glowMaskOf(d, W, H, seeds) {
+/* 「ひとつながりの白い所」を判定 (黒フチで区切られた範囲)。
+   seeds: 指定位置の白いライン / fromEdges: true なら画像の外周からつながる白(=背景)も含める。
+   白と黒フチの境目(なめらかな部分)も一緒に暗くするため、判定を1px広げる */
+function whiteMaskOf(d, W, H, seeds, fromEdges) {
   const mask = new Uint8Array(W * H), stack = [];
   const isWhite = p => { const i = p * 4, r = d[i], g = d[i + 1], b = d[i + 2], mn = Math.min(r, g, b);
     return mn >= 160 && Math.max(r, g, b) - mn <= 40; };
   const push = p => { if (!mask[p] && isWhite(p)) { mask[p] = 1; stack.push(p); } };
+  if (fromEdges) {
+    for (let x = 0; x < W; x++) { push(x); push((H - 1) * W + x); }
+    for (let y = 0; y < H; y++) { push(y * W); push(y * W + W - 1); }
+  }
   seeds.forEach(([fx, fy]) => {
     const sx = Math.round(fx * (W - 1)), sy = Math.round(fy * (H - 1));
     for (let r = 0; r <= 4; r++) { // 位置が白でなければ近く(4px以内)の白を探す
@@ -1410,12 +1415,12 @@ function optimizeSymbolImages() {
         }
         c.putImageData(id, 0, 0);
         const url = cv.toDataURL('image/jpeg', 0.9); // 白背景・非透過なのでJPEGでOK
-        /* [ファンキー2] 7だけ: 「明るい7」= 赤・黄と BB_GLOW_SEEDS の白いラインだけ光らせ、背景・他の白は暗く。暗い7は下の暗化処理の後に作る */
+        /* [ファンキー2] 7だけ: 「明るい7」= 外側の背景と BB_DARK_SEEDS の白いラインだけ暗く、7の赤・黄・他の白は光る。暗い7は下の暗化処理の後に作る */
         const bbW = (MACHINE.bbBlinkDim && sym === '7') ? whiteWeightOf(d) : null;
         let bbOn = null;
         if (bbW) {
-          const glow = glowMaskOf(d, W, H, BB_GLOW_SEEDS), wOn = new Float32Array(bbW.length);
-          for (let p = 0; p < bbW.length; p++) wOn[p] = glow[p] ? 0 : bbW[p];
+          const dark = whiteMaskOf(d, W, H, BB_DARK_SEEDS, true), wOn = new Float32Array(bbW.length);
+          for (let p = 0; p < bbW.length; p++) wOn[p] = dark[p] ? bbW[p] : 0;
           bbOn = darkenWhite(c, id, wOn);
         }
         if (WIN_DIM_KEYS.includes(sym)) {
