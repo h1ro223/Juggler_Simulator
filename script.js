@@ -98,6 +98,44 @@ const MACHINES = {
       [4,5,1,7,6,4,5,1,3,4,5,1,3,4,5,1,3,4,5,1,3]  // 右
     ],
     reelImgOverride: [{ 8: 'C2' }, {}, {}] // 左リール index8 (コマ13) を Cherry2.png に
+  },
+  /* ゴッドジャグラーEX (完全オリジナル・爆裂仕様)
+     ・BB中はCOUNTが「残りゲーム数」表示 (1Gごとに減算)。通常BB=21G+追加ゲームボーナス / S-ZONE=33〜99G
+     ・BB当選時1/5でS-ZONE突入 → 次のBBは100%継続(ゲーム数アップ)、RB当選で終了
+     ・素材はネオアイムとほぼ同じ (GODJフォルダ)。777verなし・プレミア演出なし */
+  god: {
+    name: 'ゴッドジャグラーEX',
+    short: 'ゴッド',
+    settings: [
+      { bb: 1/555.5, rb: 1/555.5, grape: 1/6.55 },
+      { bb: 1/473.5, rb: 1/515.0, grape: 1/6.55 },
+      { bb: 1/425.5, rb: 1/449.5, grape: 1/6.55 },
+      { bb: 1/332.5, rb: 1/424.0, grape: 1/6.55 },
+      { bb: 1/299.5, rb: 1/369.0, grape: 1/6.55 },
+      { bb: 1/275.5, rb: 1/355.5, grape: 1/5.55 }
+    ],
+    small: { replay: 1/7.555, cherry: 1/25.5, bell: 1/555.5, clown: 1/555.5 }, // 全設定共通の小役確率
+    dirs: { reel: './GODJ/Reel/', gogo: './GODJ/GOGO/', se: './GODJ/SE/', bgm: './GODJ/BGM/', guide: './GODJ/Guide/', sp: './GODJ/SP/' },
+    saveSuffix: '_god',
+    bbLimit: 280,        // (通常の枚数判定は使わない: BBはゲーム数で終了)
+    bbSkipPay: 252,      // 通常BB 21G×12枚
+    gogoSnd: true,       // ペカ音あり (ネオアイムと同じ)
+    gogoSndLateOnly: true,
+    replaySplit: true,
+    bbHitWait: 0,
+    pekaFirst: 0.15,
+    lampFade: false,
+    lampFadeOut: 0,
+    rainbow: true,       // 中段チェリーのレインボー点灯あり
+    premium: false,      // プレミア演出なし (今後検討)
+    noX: true,           // 777verなし (77Gのゾロ目は運命ver)
+    godZone: true,       // ゲーム数管理のBB・追加ゲームボーナス・S-ZONE
+    noMission: true,     // ミッションなし (ボタンはグレーアウト)
+    noCustom: true,      // カスタム設定モード不可 (ボタンはグレーアウト)
+    noTa: true,          // 目押しTA不可 (ボタンはグレーアウト)
+    /* ネオアイム専用キーのうち、この機種でも使う素材 (GODJフォルダから読み込む) */
+    shareAssets: ['BB', 'BBHITSP', 'BBSP', 'BBFINISHSP', 'BBHITD9', 'BBD9', 'BBFINISHD9',
+                  'BBHITUNMEI', 'BBUNMEI', 'BBFINISHUNMEI', 'LEVERSP', 'GRAPE14SP', 'GOGO']
   }
 };
 const MACHINE_ID = (() => {
@@ -109,7 +147,7 @@ document.documentElement.dataset.machine = MACHINE_ID; // CSSのフレーム色�
 /* 素材パスを選択中の機種のフォルダに読み替える ('./SE/Bet.mp3' → dirs.se + 'Bet.mp3')
    './Reel/x.png' のような共通表記、または './ImJ/Reel/x.png' のような機種フォルダ表記のどちらでも読み替える */
 const DIR_MAP = { Reel: 'reel', GOGO: 'gogo', SE: 'se', BGM: 'bgm', Guide: 'guide', SP: 'sp' };
-const DIR_RE = /^\.\/(?:(?:ImJ|GoJ|FunJ)\/)?(Reel|GOGO|SE|BGM|Guide|SP)\//;
+const DIR_RE = /^\.\/(?:(?:ImJ|GoJ|FunJ|GODJ)\/)?(Reel|GOGO|SE|BGM|Guide|SP)\//;
 function mPath(p) {
   if (typeof p !== 'string') return p;
   const m = p.match(DIR_RE);
@@ -181,10 +219,10 @@ const LINES = [
 
 /* 設定別確率 (index0 = 設定1) → 選択中の機種の値を使う (定義は先頭の MACHINES) */
 const SETTINGS = MACHINE.settings;
-const P_REPLAY = 1/7.298;
-const P_CHERRY = 1/38.1;
-const P_BELL   = 1/1092.3;
-const P_CLOWN  = 1/1092.3;
+const P_REPLAY = (MACHINE.small && MACHINE.small.replay) || 1/7.298;  // ゴッド: 1/7.555
+const P_CHERRY = (MACHINE.small && MACHINE.small.cherry) || 1/38.1;   // ゴッド: 1/25.5
+const P_BELL   = (MACHINE.small && MACHINE.small.bell)   || 1/1092.3; // ゴッド: 1/555.5
+const P_CLOWN  = (MACHINE.small && MACHINE.small.clown)  || 1/1092.3; // ゴッド: 1/555.5
 /* 中段チェリー(単独チェリー/レアチェリー): BB確定・BB確率の内数 設定1-3: 1/2184.53, 4-6: 1/1820.44 */
 const rareCherryProb = s => (s <= 3 ? 1/2184.53 : 1/1820.44);
 const CHERRY_DUP_RATE = 0.25; // ボーナス当選時のチェリー重複割合(概算)
@@ -211,7 +249,7 @@ function getProbs() {
     const sp = SETTINGS[state.challenge.answerSetting - 1];
     return { bb: sp.bb, rb: sp.rb, grape: sp.grape, replay: P_REPLAY, cherry: P_CHERRY, bell: P_BELL, clown: P_CLOWN };
   }
-  if (state.customProb) {
+  if (state.customProb && !MACHINE.noCustom) { // ゴッドはカスタム設定モード不可
     const c = state.customProb;
     const p = d => { const n = Number(d); return (isFinite(n) && n >= 1) ? 1 / n : 0; }; // 0や不正値=発生しない(無効)
     return { bb: p(c.bb), rb: p(c.rb), grape: p(c.grape), replay: p(c.replay), cherry: p(c.cherry), bell: p(c.bell), clown: p(c.clown) };
@@ -320,6 +358,17 @@ const RB_LIMIT   = 98;     // RB: 98枚を超える払い出しで終了
 /* 「現在のボーナスをスキップ」で即時獲得する枚数(実質手取り)。
    払い出し上限(BB294枚/RB112枚)から、消化に必要なゲーム数×2BET分を差し引いた値。 */
 const BET_LAMP_MS = 50;    // BETランプを1つずつ点灯させる間隔(MaxBet2/3.mp3に同期)
+/* ===== [ゴッド] ゲーム数BB / 追加ゲームボーナス / S-ZONE ===== */
+const GOD_BB_G     = 21;                    // 通常BBのゲーム数 (21G×純増12枚=252枚)
+const SZ_RATE      = 1 / 5;                 // BB当選時のS-ZONE突入率
+const SZ_G         = [0, 33, 55, 77, 99];   // S-ZONE 1〜4回目のゲーム数 (5回目以降は99Gループ)
+const SZ_MAX       = 4;
+const SZ_REV_MS    = 1000;                  // S-ZONE突入時のリール逆回転の時間 (この後正回転へ)
+const SZ_SHOW_MS   = 1000;                  // レバーONから「S33」表示までの時間
+const GOD_ADD_TABLE = [[0.50, 0], [0.45, 5], [0.05, 55]]; // 追加ゲームボーナス [確率, 上乗せG]
+const GOD_DRUM_WAIT = 1000;                 // PAY OUTが14になってからドラム開始まで
+const GOD_DRUM_MS   = 3000;                 // ドラム表示の時間
+const GOD_DRUM_STEP = 60;                   // ドラム 000→111→… の切替間隔
 const END_HIDE_MS = 150;   // RB.mp3 / BBFinish系の再生停止からCOUNT「---」化までの待ち時間
 const STOP_GATE_MS = 600;  // レバー音の再生開始から停止ボタンが押せるようになるまで
 const STOP_MIN_MS  = 150;  // 停止操作の最小間隔(十字キー等の同時押し防止)
@@ -451,13 +500,16 @@ function saveMissions() {
 }
 /* 進捗を加算/更新して達成判定 */
 function mAdd(key, n = 1) {
+  if (MACHINE.noMission) return; // ゴッド: ミッションなし
   mstore.st[key] = (mstore.st[key] || 0) + n;
   checkMissions();
 }
 function mSet(key) {
+  if (MACHINE.noMission) return;
   if (!mstore.st[key]) { mstore.st[key] = 1; checkMissions(); }
 }
 function mMax(key, val) {
+  if (MACHINE.noMission) return;
   if ((mstore.st[key] || 0) < val) { mstore.st[key] = val; checkMissions(); }
 }
 function checkMissions() {
@@ -554,6 +606,9 @@ const state = {
   forceByBtn: false,   // forceBonusを台設定のボタンで予約したか (プレミア設定の反映対象)
   lampTapArmed: false, // GOGOランプ5回タップ→このゲームでペカ確定(レバー時に判定)
   stopHeld: false,     // 第3停止ボタンを押し込んだまま(離すまでボーナス突入を保留)
+  /* --- [ゴッド] S-ZONE / ゲーム数BB --- */
+  szNext: 0,           // S-ZONE継続状態: 0=なし / 1〜4=次のBBはS-ZONEのこの段階 (4=99Gループ)
+  godBB: null,         // 進行中BBのゲーム数管理 (godBBNew参照)
   /* --- プレミア演出 (そのゲーム限り。レバーONで毎回リセット) --- */
   premSilent: false,   // 無音: リール回転音・停止音を鳴らさない
   premLeverFF: false,  // レバーONファンファーレ: レバーONで当選音
@@ -662,8 +717,8 @@ function pickBBVersion(g) {
   }
   if (g === 1) return 'SP';                          // 軍艦マーチ
   if (g >= 2 && g <= 5) return 'D9';                 // 第九
-  if (g === 77) return 'X';                          // 777(オリジナル)
-  if (g >= 11 && g <= 99 && g % 11 === 0) return 'UNMEI'; // 運命(ゾロ目・77は上で除外済み)
+  if (g === 77 && !MACHINE.noX) return 'X';         // 777(オリジナル) ※ゴッドは777verなし→下の運命verに
+  if (g >= 11 && g <= 99 && g % 11 === 0) return 'UNMEI'; // 運命(ゾロ目。77はアイムのみ上で除外済み)
   return 'NORMAL';
 }
 const SE_FILES = {
@@ -1283,16 +1338,19 @@ class Reel {
     }
     this.strip.appendChild(frag);
   }
-  startSpin(delay) {
+  /* rev=true: 逆回転で始動 → SZ_REV_MS後に減速して正回転へ ([ゴッド] S-ZONE突入) */
+  startSpin(delay, rev = false) {
     this.mode = 'spin';
     this.v = 0;
+    this.rev = !!rev;
+    this.revUntil = rev ? performance.now() + delay + aMs(SZ_REV_MS) : 0;
     /* 加速時間・回転開始ディレイもオート倍速に追従させる */
     this.accelUntil = performance.now() + aMs(220) + delay;
     this.spinDelay = performance.now() + delay;
     this.accelMs = aMs(180);
   }
   requestStop() {
-    if (this.mode !== 'spin' || this.v < curSpeed() * 0.95) return false;
+    if (this.mode !== 'spin' || this.rev || this.v < curSpeed() * 0.95) return false; // 逆回転中は止められない
     const target = chooseStopPosition(this.idx, this.pos);
     this.target = target;
     /* 押した瞬間に出目は確定するため、ここで記録する。
@@ -1309,6 +1367,17 @@ class Reel {
       if (now < this.spinDelay) return;
       // 加速
       const V = curSpeed();
+      if (this.rev) {
+        /* 逆回転: 加速→一定速→SZ_REV_MS後に減速して止まり、そこから正回転で再加速 */
+        if (now < this.revUntil) this.v = Math.min(V, this.v + V * dt / (this.accelMs || 180));
+        else {
+          this.v = Math.max(0, this.v - V * dt / (this.accelMs || 180));
+          if (this.v === 0) { this.rev = false; this.accelUntil = now + aMs(220); }
+        }
+        this.pos = mod(this.pos + this.v * dt, KOMA);
+        this.render();
+        return;
+      }
       if (now < this.accelUntil) {
         this.v = Math.min(V, this.v + V * dt / (this.accelMs || 180));
       } else {
@@ -1719,9 +1788,11 @@ function startGame() {
   disp.payout = 0;
 
   /* --- 抽選 --- */
+  let godRev = false; // [ゴッド] S-ZONE突入のリール逆回転
   if (state.inBonus) {
     state.smallFlag = 'GRAPE'; // ボーナス中は毎ゲームブドウ
     state.dupCherry = false;
+    if (godBBOn()) godRev = godOnLever(); // [ゴッド] COUNT(残りゲーム数)を1減らす / 1G目はS-ZONE判定
   } else {
     const sp = getProbs(); // カスタム設定モード適用中はカスタム確率
     let newBonus = false, rareHit = false, dupCherry = false;
@@ -1838,9 +1909,17 @@ function startGame() {
   }
 
   /* リール始動 */
-  reels.forEach((r, i) => r.startSpin(aMs(i * 70)));
+  reels.forEach((r, i) => r.startSpin(aMs(i * 70), godRev));
+  if (godRev) {
+    /* 逆回転中〜正回転の加速が終わるまでは停止ボタンを受け付けない */
+    const gate = aMs(SZ_REV_MS + 180 + 220 + 2 * 70 + 60);
+    state.stopEnableAt = Math.max(state.stopEnableAt, performance.now() + gate);
+    setTimeout(updateUI, gate + 10);
+  }
   if (state.autoMode) scheduleAutoStops();
-  if (state.inBonus) {
+  if (godBBOn()) {
+    message(godMsg());
+  } else if (state.inBonus) {
     const limit = state.bonusType === 'BB' ? (state.bonusVer === 'X' && state.xMode === 2 ? 336 - 14 : BB_LIMIT) : RB_LIMIT;
     message(`${state.bonusType === 'BB' ? 'BIG' : 'REGULAR'} BONUS 中!  ${state.bonusPaid} / ${limit}枚`);
   } else if (state.lampLit) {
@@ -2251,7 +2330,10 @@ function resolveGame() {
     }
 
     /* ボーナス中の進行 */
-    if (state.inBonus) {
+    if (state.inBonus && godBBOn()) {
+      state.bonusPaid += pay;
+      godAfterGame(pay, payoutSndMs); // [ゴッド] ゲーム数で進行 (最終ゲーム→終了 / LAST2G→追加ゲーム抽選)
+    } else if (state.inBonus) {
       state.bonusPaid += pay;
       /* 777verセカンドゾーン中は336枚(=リミット322超)まで延長 */
       const limit = state.bonusType === 'BB'
@@ -2732,6 +2814,131 @@ function clearBonusBlink() {
   el.dpRB.classList.remove('bonus-blink');
 }
 
+/* ===== [ゴッド] BB進行 =====
+   godBB: { cnt: 表示中の残りゲーム数, sz: S-ZONE段階(0=通常BB), szShown: S表示済み,
+            first: BB1G目のレバー前, noDec: 次のレバーで減算しない(1G目・追加抽選の結果表示後),
+            view/holdUntil: 一時的に別の数字を見せる(S33表示前の「21」・ドラム前の「2」),
+            drumFrom/drumUntil: ドラム表示の時間, add: 上乗せ合計 }
+   ※時刻(performance.now)は保存しない(リロード時は0に戻して結果の数字を表示) */
+function godBBOn() { return !!(MACHINE.godZone && state.inBonus && state.bonusType === 'BB' && state.godBB); }
+function godBBNew() {
+  let sz = 0;
+  if (state.szNext > 0) sz = Math.min(state.szNext, SZ_MAX); // S-ZONE継続中 → 100%突入
+  else if (Math.random() < SZ_RATE) sz = 1;                   // 通常時のBB → 1/5で S-ZONE 1回目
+  if (sz) state.szNext = Math.min(sz + 1, SZ_MAX);           // 次のBBは次の段階 (4回目以降は99Gループ)
+  return { cnt: GOD_BB_G, sz, szShown: false, first: true, noDec: true, view: '', holdUntil: 0, drumFrom: 0, drumUntil: 0, add: 0 };
+}
+function godAddDraw() {
+  let r = Math.random();
+  for (const [p, g] of GOD_ADD_TABLE) { if (r < p) return g; r -= p; }
+  return 0;
+}
+/* COUNT表示の文字 */
+function godCountText() {
+  const g = state.godBB;
+  const now = performance.now();
+  if (now < g.holdUntil || (g.drumFrom && now < g.drumFrom)) return g.view;
+  if (g.drumFrom && now < g.drumUntil) { const d = Math.floor(now / aMs(GOD_DRUM_STEP)) % 10; return '' + d + d + d; }
+  return (g.szShown ? 'S' : '') + g.cnt;
+}
+function godShowCount() { return !!(MACHINE.godZone && state.godBB && (state.inBonus || state.bonusCountHold)); }
+let godTickTimer = null;
+function godTick() { // 一時表示・ドラム中だけCOUNTを再描画し続ける
+  if (godTickTimer) return;
+  godTickTimer = setInterval(() => {
+    const g = state.godBB, now = performance.now();
+    renderMedals();
+    if (!g || (now >= g.holdUntil && now >= g.drumUntil)) { clearInterval(godTickTimer); godTickTimer = null; renderMedals(); }
+  }, 30);
+}
+function godMsg() {
+  const g = state.godBB;
+  const t = godCountText();
+  const n = parseInt(t.replace('S', ''), 10);
+  if (g.szShown && t.startsWith('S')) return `S-ZONE ${g.sz}回目${g.sz >= SZ_MAX ? '以降' : ''}!!  残り${n}G`;
+  return isNaN(n) ? 'BIG BONUS 中!' : `BIG BONUS 中!  残り${n}G`;
+}
+/* レバーON (BB中): 1G目は減算なし・S-ZONEならリール逆回転→1秒後にS表示。2G目以降は1ずつ減算 */
+function godOnLever() {
+  const g = state.godBB;
+  let rev = false;
+  if (g.noDec) g.noDec = false; else g.cnt = Math.max(1, g.cnt - 1);
+  if (g.first) {
+    g.first = false;
+    if (g.sz) {
+      rev = true;
+      g.cnt = SZ_G[g.sz];
+      g.szShown = true;
+      g.view = String(GOD_BB_G);                       // 1秒間は「21」のまま見せる
+      g.holdUntil = performance.now() + aMs(SZ_SHOW_MS);
+      setTimeout(() => { if (state.godBB === g && state.inBonus) { renderMedals(); message(godMsg(), true); } }, aMs(SZ_SHOW_MS) + 20);
+      godTick();
+    }
+  }
+  return rev;
+}
+let godDrumTimer = null;
+/* 1ゲームの払い出し後 (BB中): 最終ゲームなら0表示で終了 / 通常BBの残り2Gなら追加ゲームボーナス抽選 */
+function godAfterGame(pay, payoutSndMs) {
+  const g = state.godBB;
+  if (g.cnt <= 1) {                                    // 最終ゲーム: 第3停止で0表示 → BB終了
+    g.cnt = 0; g.holdUntil = 0; g.drumFrom = 0; g.drumUntil = 0;
+    renderMedals();
+    endBonus(payoutSndMs);
+    return;
+  }
+  if (!g.sz && g.cnt === 2) {                          // 通常BBのLAST 2G: 追加ゲームボーナス抽選
+    const add = godAddDraw();
+    const now = performance.now();
+    const gogoWait = Math.max(0, state.gogoSndEnd - now);
+    const payDone = pay > 0 ? gogoWait + pay * aMs(COUNT_MS) : 0; // PAY OUTが14になる時刻
+    g.view = '2';
+    g.drumFrom = now + payDone + aMs(GOD_DRUM_WAIT);
+    g.drumUntil = g.drumFrom + aMs(GOD_DRUM_MS);
+    g.cnt = 1 + add;                                   // 結果(次のレバーで表示される数字)を先に確定
+    g.noDec = true;
+    g.add += add;
+    state.betLock = true;                              // ドラム中は MAXBET・精算(・貸出/レバー) を押せない
+    if (godDrumTimer) clearTimeout(godDrumTimer);
+    godDrumTimer = setTimeout(() => {
+      godDrumTimer = null;
+      if (state.godBB !== g) return;
+      g.drumFrom = 0; g.drumUntil = 0;
+      if (state.inBonus) state.betLock = false;
+      renderMedals();
+      message(add > 0 ? `追加ゲームボーナス +${add}G!!  残り${g.cnt}G` : godMsg(), add > 0);
+      saveGame();
+      updateUI();
+    }, g.drumUntil - now);
+    godTick();
+    message(godMsg());
+    return;
+  }
+  message(godMsg());
+}
+/* スキップ: 残りゲームを即消化 (追加ゲームボーナスもその場で抽選)。1G=純増12枚 */
+function godSkip() {
+  const g = state.godBB;
+  if (godDrumTimer) { clearTimeout(godDrumTimer); godDrumTimer = null; }
+  let c = g.first ? (g.sz ? SZ_G[g.sz] : GOD_BB_G) : (g.noDec ? g.cnt : g.cnt - 1);
+  let games = 0;
+  while (c >= 1) {
+    games++;
+    if (!g.sz && c === 2) { const add = godAddDraw(); g.add += add; c = 1 + add; }
+    else c--;
+  }
+  if (g.sz) g.szShown = true;
+  g.first = false; g.cnt = 0; g.view = ''; g.holdUntil = 0; g.drumFrom = 0; g.drumUntil = 0;
+  state.betLock = false;
+  addPayout(games * 12);
+  state.bonusPaid += games * 14;
+  syncMedalDisplay();
+  endBonus(0);
+  refreshSkipBtn();
+  saveGame();
+  updateUI();
+}
+
 /* --- ボーナス --- */
 function startBonus(type) {
   clearPremium(); // ボーナス突入でプレミア演出は終了(無音を解除してBGMを鳴らす)
@@ -2745,6 +2952,10 @@ function startBonus(type) {
   disp.bonus = 0;
   state.bonusFlag = null;
   state.smallFlag = null;
+  if (MACHINE.godZone) {
+    if (type === 'BB') state.godBB = godBBNew();       // [ゴッド] S-ZONE抽選・ゲーム数BB開始
+    else { state.godBB = null; state.szNext = 0; }     // [ゴッド] RB当選でS-ZONE終了 (1回目に戻る)
+  }
   state.pendingHist = { g: state.counts.start, t: type }; // 履歴グラフ用
   state.bonusLog.push({ t: type, g: state.counts.start });  // ボーナス履歴一覧用(全件・古い順)
   if (type === 'BB') { state.counts.bb++; mAdd('bb'); } else { state.counts.rb++; mAdd('rb'); }
@@ -2753,7 +2964,7 @@ function startBonus(type) {
   if (sesB >= 10) mSet('ses10');
   unlightLamp(MACHINE.lampFadeOut || 0); // ゴーゴー3=0.25秒フェード消灯 / アイム=即消灯(777verも従来どおり)
   el.topBanner.classList.add('bonus-flash');
-  message(type === 'BB' ? `BIG BONUS!! (最大+${BB_SKIP_PAY}枚)` : `REGULAR BONUS!! (最大+${RB_SKIP_PAY}枚)`, true);
+  message(type === 'BB' ? (MACHINE.godZone ? 'BIG BONUS!!' : `BIG BONUS!! (最大+${BB_SKIP_PAY}枚)`) : `REGULAR BONUS!! (最大+${RB_SKIP_PAY}枚)`, true);
   if (type === 'BB') {
     /* 当選G数から楽曲バージョンを決定 */
     state.bonusVer = pickBBVersion(state.bbWinG || 0);
@@ -2819,6 +3030,7 @@ function endBonus(payoutSndMs = 0) {
     hidden = true;
     state.bonusCountHold = false;
     state.bonusCountFinal = 0;
+    if (!state.inBonus) state.godBB = null; // [ゴッド] COUNT「---」と同時にゲーム数表示を終了
     disp.bonus = 0;
     /* 履歴グラフ: COUNT表示が「---」になるのと同じタイミングで
        左端(進行中)を確定して右へシフトする */
@@ -2931,8 +3143,8 @@ function autoPress(i) {
     return;
   }
   const r = reels[i];
-  /* リールが定速に達するまで待つ */
-  if (r.mode !== 'spin' || r.v < curSpeed() * 0.95) {
+  /* リールが定速に達するまで待つ (逆回転中も待つ) */
+  if (r.mode !== 'spin' || r.rev || r.v < curSpeed() * 0.95) {
     autoSchedule(() => autoPress(i), aMs(60));
     return;
   }
@@ -3045,7 +3257,8 @@ function renderMedals() {
   /* 目押しTA中は持ちメダル・投資・回収・差額を「-」表示にする(メダル管理が不要なため) */
   el.wMochi.textContent = taUiOn() ? '-' : String(disp.mochi);
   el.segPayout.textContent = String(disp.payout);
-  el.segBonus.textContent = (state.inBonus || state.bonusCountHold) ? String(disp.bonus) : '---';
+  el.segBonus.textContent = godShowCount() ? godCountText() // [ゴッド] 残りゲーム数 / S33 / ドラム
+    : (state.inBonus || state.bonusCountHold) ? String(disp.bonus) : '---';
   xCheckPhase(); // 777ver: COUNT表示が210に達した瞬間にBBX2へ
 }
 /* 一気に反映 (貸出・精算・リセット・ロード時) */
@@ -3295,6 +3508,7 @@ function saveGame() {
       lampLit: state.lampLit, inBonus: state.inBonus,
       bonusType: state.bonusType, bonusPaid: state.bonusPaid,
       bbWinG: state.bbWinG, bonusVer: state.bonusVer,
+      szNext: state.szNext, godBB: state.godBB,
       replayPending: state.replayPending,
       history: state.history, pendingHist: state.pendingHist, bonusLog: state.bonusLog,
       rareLamp: state.rareLamp, kaishuYen: state.kaishuYen,
@@ -3343,6 +3557,14 @@ function loadGame() {
     state.bonusPaid = d.bonusPaid || 0;
     state.bbWinG = d.bbWinG || 0;
     state.bonusVer = d.bonusVer || 'NORMAL';
+    if (MACHINE.godZone) {
+      /* [ゴッド] S-ZONE継続状態・BBのゲーム数 (時刻は保存しても意味がないので0に戻す) */
+      state.szNext = (d.szNext >= 0 && d.szNext <= SZ_MAX) ? d.szNext : 0;
+      const g = d.godBB;
+      state.godBB = (g && typeof g.cnt === 'number') ? Object.assign(g, { view: '', holdUntil: 0, drumFrom: 0, drumUntil: 0 }) : null;
+      if (state.godBB && !(state.inBonus && state.bonusType === 'BB')) state.godBB = null;
+      state.customProb = null; // カスタム設定モード不可
+    }
     state.replayPending = d.replayPending || 0;
     state.replayLamp = !!d.replayLamp;
     state.gogo1Bet = !!d.gogo1Bet;
@@ -3377,6 +3599,7 @@ function resetData() {
   state.hadBonus = false;   // 連チャン判定もリセット(リセット直後の誤ジャグ連防止)
   state.prevBonusType = null;
   state.renChain = 0;
+  if (!state.inBonus) state.szNext = 0; // [ゴッド] S-ZONE継続状態もリセット
   state.diffLog = [];       // 差枚推移グラフもリセット
   state.diffBase = state.totalOut - state.totalIn; // ここを差枚0の基準に
   renderGraph();
@@ -3394,7 +3617,7 @@ function resetAll() {
     inBonus: false, bonusType: null, bonusPaid: 0,
     history: [], pendingHist: null, bonusLog: [], betLock: false, bbHitPlaying: false, payoutLock: false,
     stopHeld: false, pendingBonus: null, ta: null,
-    bbWinG: 0, bonusVer: 'NORMAL', bonusCountHold: false, bonusCountFinal: 0,
+    bbWinG: 0, bonusVer: 'NORMAL', bonusCountHold: false, bonusCountFinal: 0, szNext: 0, godBB: null,
     rareLamp: false, kaishuYen: 0, forceBonus: false, forceByBtn: false, customProb: null, xMode: 0, x2Started: false, xLock: false, seMuteX: false,
     challenge: null, challengeStats: { played: 0, correct: 0 }, dataMode: false, diffLog: [], diffBase: 0, graphMinG: 1000,
     hadBonus: false, prevBonusType: null, renChain: 0,
@@ -3479,6 +3702,7 @@ function refreshSkipBtn() {
 function skipBonus() {
   if (!state.inBonus) return;
   if (state.bonusType === 'BB' && (state.bbHitPlaying || state.bonusVer === 'X')) return; // 777verは演出優先でスキップ不可
+  if (godBBOn()) { mSet('usedSkip'); godSkip(); return; } // [ゴッド] 残りゲーム数で即消化
   const grossTarget = state.bonusType === 'BB' ? BB_LIMIT + 14 : RB_LIMIT + 14; // 294 / 112 (COUNT表示用)
   const netTarget = state.bonusType === 'BB' ? BB_SKIP_PAY : RB_SKIP_PAY;      // 252 / 96  (実際の獲得枚数)
   const remain = Math.max(0, netTarget - state.bonusPaid); // 既に実際の獲得済み分(通常消化分)を差し引いた不足分だけ加算
@@ -3538,8 +3762,43 @@ function setPremPick(k, byUser) {
     message(it ? `プレミア設定: ${it.name} (「次ゲームでGOGO!CHANCE点灯」で発生)` : 'プレミア設定: ランダム抽選');
   }
 }
+/* [ゴッド] S-ZONEテスト: 継続状態の表示と選択 */
+function szLabel(k) {
+  return k ? `次のBBはS-ZONE ${k}回目${k >= SZ_MAX ? '以降' : ''} (${SZ_G[k]}G)` : 'S-ZONEなし (通常状態)';
+}
+function refreshSzBtn() {
+  const s = $('szPickLabel');
+  if (s && MACHINE.godZone) s.textContent = '現在: ' + szLabel(state.szNext);
+}
+function buildSzRows() {
+  const box = $('szRows');
+  if (!box) return;
+  box.textContent = '';
+  for (let k = 0; k <= SZ_MAX; k++) {
+    const lab = document.createElement('label');
+    lab.className = 'prem-row' + (k === state.szNext ? ' sel' : '');
+    const r = document.createElement('input');
+    r.type = 'radio'; r.name = 'szPick'; r.value = String(k); r.checked = k === state.szNext;
+    r.addEventListener('change', () => {
+      if (!r.checked) return;
+      state.szNext = k;
+      box.querySelectorAll('.prem-row').forEach(l => l.classList.toggle('sel', l.querySelector('input').checked));
+      refreshSzBtn();
+      saveGame();
+      message('S-ZONEテスト: ' + szLabel(k));
+    });
+    const txt = document.createElement('span');
+    const n = document.createElement('span'); n.className = 'p-name'; n.textContent = k ? `S-ZONE ${k}回目${k >= SZ_MAX ? '以降' : ''}` : 'S-ZONEなし';
+    const d = document.createElement('span'); d.className = 'p-desc';
+    d.textContent = k ? `次のBBで${SZ_G[k]}G (${SZ_G[k]}G×14枚 純増${SZ_G[k] * 12}枚)` : '通常状態 (BB当選時に1/5でS-ZONE 1回目)';
+    txt.append(n, d);
+    lab.append(r, txt);
+    box.appendChild(lab);
+  }
+}
 function refreshPekaBtn() {
   refreshPremBtn();
+  refreshSzBtn();
   /* 目押しTA中はGOGO確定ボタンを使わせない */
   if (taActive()) {
     const b0 = $('btnForcePeka');
@@ -3578,6 +3837,7 @@ function closeSubOverlays() {
   $('systemOverlay').hidden = true;
   $('customOverlay').hidden = true;
   $('premOverlay').hidden = true;
+  $('szOverlay').hidden = true;
   $('challengeOverlay').hidden = true;
   $('missionOverlay').hidden = true;
   $('resetOverlay').hidden = true;
@@ -3612,7 +3872,7 @@ function refreshSettingBtns() {
     btn.classList.toggle('selected', !inCh && !state.customProb && Number(btn.dataset.s) === state.setting);
     btn.disabled = inCh; // 判別チャレンジ中は設定変更不可
   });
-  $('btnCustomProb').disabled = inCh;
+  $('btnCustomProb').disabled = inCh || !!MACHINE.noCustom; // ゴッドはカスタム設定モード不可
   el.currentSetting.textContent = inCh ? '現在:???(判別チャレンジ中)'
     : state.customProb ? '現在:カスタム' : `現在:設定${state.setting}`;
 }
@@ -3658,7 +3918,7 @@ function bindEvents() {
   document.title = MACHINE.name + ' ' + APP_VER;
   document.querySelectorAll('.dp-name').forEach(n => { n.textContent = MACHINE.name + ' ' + APP_VER; });
   const ptBig = document.querySelector('#payTable .pt-big-note'); // 小役一覧のBB獲得枚数も機種別に
-  if (ptBig) ptBig.textContent = `最大+${BB_SKIP_PAY}枚`;
+  if (ptBig) ptBig.textContent = MACHINE.godZone ? '21G〜 (追加ゲーム・S-ZONEあり)' : `最大+${BB_SKIP_PAY}枚`;
   /* HTML内の画像(GOGOランプ・小役一覧・リール配列)を選択中の機種フォルダに読み替え */
   /* [ゴーゴー3] ツノッチをリール左上の角に配置 (普段は非表示) */
   if (MACHINE_ID === 'gogo') {
@@ -3792,6 +4052,21 @@ function bindEvents() {
       message(it ? `次のゲームでGOGO!CHANCE確定! (プレミア: ${it.name})` : '次のゲームでGOGO!CHANCE確定!');
     }
   });
+  /* --- [ゴッド] S-ZONEテスト / 使えない機能のグレーアウト --- */
+  if (MACHINE.godZone) {
+    $('btnSzTest').hidden = false;
+    $('btnSzTest').addEventListener('click', () => { buildSzRows(); $('szOverlay').hidden = false; });
+    $('btnCloseSz').addEventListener('click', () => { $('szOverlay').hidden = true; });
+    $('szOverlay').addEventListener('click', e => { if (e.target === $('szOverlay')) $('szOverlay').hidden = true; });
+    refreshSzBtn();
+  }
+  if (MACHINE.noMission) $('btnCatMission').disabled = true;
+  if (MACHINE.noTa) {
+    $('btnMgTa').disabled = true;
+    const sm = $('btnMgTa').querySelector('small');
+    if (sm) sm.textContent = 'この機種では使用できません';
+  }
+  if (MACHINE.noCustom) $('btnCustomProb').disabled = true;
   /* --- プレミア設定 (ラジオボタン) --- */
   $('btnPremSet').addEventListener('click', () => {
     if (!premPickList().length) { askConfirm('この機種にプレミアはありません。', null, true); return; }
@@ -4274,6 +4549,8 @@ function bindEvents() {
     { g: '星条旗よ永遠なれver', key: 'BBSTAR',       name: 'BB中BGM (星条旗よ永遠なれ)' },
     { g: '星条旗よ永遠なれver', key: 'BBFINISHSTAR', name: 'BB終了 (星条旗よ永遠なれ)' });
   SR_LISTS.funky2.push({ g: 'REGULAR BONUS', key: 'RB', name: 'RB中BGM' });
+  /* ゴッドジャグラーEX: ネオアイムと同じ曲構成 (777ver・シークレット曲なし) */
+  SR_LISTS.god = SR_LISTS.aime.filter(t => t.g !== '777ver' && t.key !== 'FUNKY');
   let srMachine = MACHINE_ID;                         // サウンドルームで表示中の機種
   let SR_TRACKS = SR_LISTS[srMachine] || SR_LISTS.aime;
   const srAudio = new Audio();

@@ -164,6 +164,7 @@
       </div>
       <button id="btnCloseModal">閉じる</button>
       <p class="modal-credit">made by hiro/ヒロ<br><a href="https://github.com/h1ro223" target="_blank" rel="noopener">https://github.com/h1ro223</a></p>
+      <p class="fan-note">※このサイトは非公式のファンメイド作品です。株式会社北電子とは関係ありません。<br>ジャグラー・JUGGLERは株式会社北電子の登録商標です。</p>
     </div>
   </div>
 
@@ -212,6 +213,8 @@
         </div>
         <button class="gold-btn" id="btnSkipBonus" disabled>現在のボーナスをスキップ</button>
         <button class="menu-btn" id="btnCustomProb">カスタム設定モード</button>
+        <!-- [ゴッドジャグラーEX] S-ZONEテスト用 (P-ZONE・G-ZONE実装後に削除を検討) -->
+        <button class="menu-btn sz-test-btn" id="btnSzTest" hidden>S-ZONEテスト<small id="szPickLabel">現在: S-ZONEなし</small></button>
       </div>
       <button class="sub-close" id="btnCloseMachine">閉じる</button>
     </div>
@@ -413,6 +416,16 @@
         <button class="sub-close" id="btnCustomOff">解除(通常設定に戻す)</button>
       </div>
       <button class="sub-close" id="btnCloseCustom">閉じる</button>
+    </div>
+  </div>
+
+  <!-- ▼ S-ZONEテスト ポップアップ (ゴッドジャグラーEXのみ) ▼ -->
+  <div id="szOverlay" class="sub-overlay" hidden>
+    <div id="szModal" class="sub-modal">
+      <h2>S-ZONEテスト</h2>
+      <p class="custom-note">S-ZONEの継続状態を書き換えます (テスト用)。<br>次のBBで100%その段階のS-ZONEに突入し、BB終了後は次の段階へ進みます。RB当選で終了します。<br>※書き換えた状態も保存されます。</p>
+      <div id="szRows"></div>
+      <button class="sub-close" id="btnCloseSz">閉じる</button>
     </div>
   </div>
 
