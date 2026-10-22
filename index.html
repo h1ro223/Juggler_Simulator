@@ -101,29 +101,20 @@
         </div>
         <div id="segArea">
           <div class="seg-box">
-            <span class="seg-value" id="segCredit">0</span>
+            <span class="seg-frame"><span class="seg-value" id="segCredit">0</span></span>
             <span class="seg-label">CREDIT</span>
           </div>
           <div class="seg-box">
-            <span class="seg-value" id="segBonus">---</span>
+            <span class="seg-frame"><span class="seg-value" id="segBonus">---</span></span>
             <span class="seg-label">COUNT</span>
           </div>
           <div class="seg-box">
-            <span class="seg-value" id="segPayout">0</span>
+            <span class="seg-frame"><span class="seg-value" id="segPayout">0</span></span>
             <span class="seg-label">PAY OUT</span>
           </div>
         </div>
-      </div>
-
-      <div id="msgBar">メダルを借りてゲームスタート!</div>
-    </section>
-
-    <!-- 操作パネル -->
-    <section id="controlPanel">
-      <div class="ctrl-row top">
-        <button class="sub-btn" id="btnRent">貸出<small>1000円</small></button>
-        <button class="sub-btn max" id="btnMaxBet">MAX<br>BET</button>
-        <button class="sub-btn" id="btnPayback">精算</button>
+        <!-- MAXBET: 実機と同じ、CREDITの左下の平たい赤丸ボタン (押せる時は点滅) -->
+        <button class="maxbet-flat" id="btnMaxBet" aria-label="MAXBET"><span>MAX BET</span></button>
         <!-- メダル投入口: 背面(Insert_1) → メダル → 前面(Insert_2) の3層。画像は各機種フォルダの Medal/ -->
         <button class="slot-btn" id="btnInsert" aria-label="メダル投入">
           <span class="slot-canvas">
@@ -133,13 +124,28 @@
           </span>
           <span class="slot-fallback">メダル<br>投入</span>
         </button>
+      </div>
+
+      <div id="msgBar">メダルを借りてゲームスタート!</div>
+    </section>
+
+    <!-- 操作パネル -->
+    <section id="controlPanel">
+      <div class="ctrl-row top">
+        <button class="sub-btn" id="btnRent">貸出<small>1000円</small></button>
+        <button class="sub-btn" id="btnPayback">精算</button>
         <button class="sub-btn gear" id="btnMenu">☰</button>
       </div>
       <div class="ctrl-row main">
         <div class="ctrl-left">
-        <div class="bet1-wrap">
+        <div class="bet1-wrap" id="bet1Wrap">
           <button class="bet1-round" id="btnBet1" aria-label="1BET"></button>
           <span class="lever-label">1BET</span>
+        </div>
+        <!-- CREDITボタン: 1秒長押しでCREDITのメダルを全部持ちメダルへ -->
+        <div class="bet1-wrap credit-wrap" id="creditWrap">
+          <button class="credit-round" id="btnCreditOut" aria-label="CREDIT"></button>
+          <span class="lever-label">CREDIT</span>
         </div>
         <div id="lever">
           <div class="lever-stick"></div>
@@ -152,7 +158,7 @@
           <button class="stop-btn" id="stop1" data-reel="1"><span></span></button>
           <button class="stop-btn" id="stop2" data-reel="2"><span></span></button>
         </div>
-        <div class="ctrl-right"></div>
+        <div class="ctrl-right"><span class="keyhole" aria-hidden="true"></span></div>
       </div>
       <div id="keyGuide">PC: [Space]レバー / [←][↓][→]ストップ / [↑]MAXBET / [1]1BET / [Enter]メダル投入 / [Insert]貸出 / [A]オート</div>
     </section>

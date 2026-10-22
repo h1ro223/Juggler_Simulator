@@ -376,8 +376,8 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 #underReel {
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px; margin-top: var(--under-gap);
 }
-#gogoLamp { grid-column: 1; justify-self: start; width: var(--gogo-w); flex-shrink: 0; position: relative; }
-#segArea { grid-column: 2; }
+#gogoLamp { grid-column: 1; grid-row: 1; justify-self: start; width: var(--gogo-w); flex-shrink: 0; position: relative; }
+#segArea { grid-column: 2; grid-row: 1; }
 /* 強ガコッ!: 告知音が大きいプレミア。ランプが一瞬強く光る */
 #gogoLamp.strong-gako { animation: strongGako .9s ease-out; }
 @keyframes strongGako {
@@ -412,12 +412,12 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
   0%,100% { filter: drop-shadow(0 0 4px rgba(120,120,255,.9)) brightness(1); }
   50%     { filter: drop-shadow(0 0 16px rgba(160,120,255,1)) brightness(1.25); }
 }
-#segArea { flex: 0 1 auto; display: flex; gap: 5px; }
-.seg-box {
-  flex: 0 1 auto; width: clamp(52px, 17vw, 66px);
-  background: #000; border: 2px solid #2c0509; border-radius: 6px;
-  padding: 3px 2px 2px; text-align: center;
-  box-shadow: inset 0 0 10px rgba(0,0,0,.9);
+#segArea { flex: 0 1 auto; display: flex; align-items: flex-start; gap: 8px; }
+/* 実機と同じく、数字だけを小さな四角で囲み、ラベルは四角の下 (CREDIT/PAY OUT=2桁分・COUNT=3桁分) */
+.seg-box { flex: 0 0 auto; text-align: center; }
+.seg-frame {
+  display: inline-block; background: #000; border: 2px solid #2c0509; border-radius: 5px;
+  padding: 2px 4px 1px; box-shadow: inset 0 0 8px rgba(0,0,0,.9); line-height: 0;
 }
 .seg-value {
   /* 固定桁(2桁/3桁)のかたまりを枠の中央に置き、その中で数字を右寄せ */
@@ -433,7 +433,28 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 }
 .seg-on { position: relative; }
 .seg-pad { color: transparent; text-shadow: none; } /* 左側の空き桁 (透明の8で幅だけ確保) */
-.seg-label { display: block; font-size: 7px; font-weight: bold; color: var(--gold); letter-spacing: .5px; margin-top: 2px; white-space: nowrap; }
+.seg-label { display: block; font-size: 7px; font-weight: bold; color: var(--gold); letter-spacing: .5px; margin-top: 2px; white-space: nowrap;
+  text-shadow: 0 1px 1px rgba(0,0,0,.8); }
+
+/* MAXBET: CREDITの左下の平たい赤丸 (押せてCREDITがある時は0.2秒間隔で点滅) */
+.maxbet-flat {
+  grid-column: 1; grid-row: 1; justify-self: end; align-self: end; margin-bottom: -2px;
+  width: 36px; height: 15px; padding: 0; border-radius: 50%; cursor: pointer; position: relative; z-index: 2;
+  border: 1px solid #3a0004;
+  background: radial-gradient(ellipse at 50% 35%, #ff6b6b, #d4101c 55%, #7c0008);
+  box-shadow: 0 3px 0 #2a0003, 0 4px 5px rgba(0,0,0,.6), inset 0 1px 1px rgba(255,255,255,.45);
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  transition: transform .05s, box-shadow .05s, filter .1s;
+}
+.maxbet-flat span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 5px; font-weight: bold; letter-spacing: .3px; color: rgba(255,255,255,.85); white-space: nowrap; pointer-events: none; }
+.maxbet-flat:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #2a0003, 0 2px 3px rgba(0,0,0,.6), inset 0 1px 1px rgba(255,255,255,.45); }
+.maxbet-flat:disabled { filter: brightness(.55) saturate(.8); cursor: default; }
+.maxbet-flat.blink { animation: maxbetBlink .4s steps(1, end) infinite; }
+@keyframes maxbetBlink { /* 明るい赤 ⇔ 白っぽい赤 (0.2秒ずつ) */
+  0%, 49.9% { background: radial-gradient(ellipse at 50% 35%, #ffe3e3, #ff7a7a 50%, #c4121c); box-shadow: 0 3px 0 #2a0003, 0 0 9px rgba(255,140,140,.95), inset 0 1px 1px rgba(255,255,255,.7); }
+  50%, 100% { background: radial-gradient(ellipse at 50% 35%, #ff6b6b, #d4101c 55%, #7c0008); }
+}
 
 /* --- メッセージバー --- */
 #msgBar {
@@ -469,14 +490,19 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 .sub-btn:disabled { filter: grayscale(.9) brightness(.55); cursor: default; }
 
 /* 下段: [1BET][レバー] | [ストップ×3 (中央)] | [空き] … 実機と同じ並び */
-.ctrl-row.main { display: grid; grid-template-columns: minmax(max-content, 1fr) auto 1fr; align-items: center; gap: 6px; }
-.ctrl-left { display: flex; align-items: flex-end; gap: 6px; justify-self: start; }
-.ctrl-right { min-width: 0; }
+.ctrl-row.main {
+  --stop: clamp(38px, 11.5vw, 48px);  /* 停止ボタンの大きさ */
+  --stop-gap: clamp(9px, 3vw, 14px);  /* 停止ボタンの間隔 */
+  display: grid; grid-template-columns: minmax(max-content, 1fr) auto 1fr; align-items: center; gap: 6px;
+}
+.ctrl-left { display: flex; align-items: flex-end; gap: 5px; justify-self: start; }
+.ctrl-right { min-width: 0; display: flex; justify-content: center; align-items: center; }
 
 /* 1BET (灰色の丸ボタン) */
 .bet1-wrap { display: flex; flex-direction: column; align-items: center; padding-bottom: 1px; }
+.bet1-wrap.disabled .lever-label { filter: grayscale(.8) brightness(.6); } /* LEVERと同じ動き */
 .bet1-round {
-  width: 32px; height: 32px; border-radius: 50%; cursor: pointer; padding: 0;
+  width: 28px; height: 28px; border-radius: 50%; cursor: pointer; padding: 0;
   border: 2px solid #1b1b20;
   background: radial-gradient(circle at 35% 30%, #e2e2e8, #9a9aa3 55%, #5b5b63);
   box-shadow: 0 3px 0 #0c0c10, inset 0 1px 2px rgba(255,255,255,.6);
@@ -484,6 +510,19 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 }
 .bet1-round:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 #0c0c10, inset 0 1px 2px rgba(255,255,255,.6); }
 .bet1-round:disabled { filter: grayscale(.9) brightness(.55); cursor: default; }
+/* CREDIT (小さな赤いボタン) */
+.credit-wrap { padding-bottom: 1px; }
+.credit-wrap .lever-label { font-size: 7px; letter-spacing: .5px; }
+.credit-round {
+  width: 16px; height: 16px; margin: 6px 0 3px; border-radius: 50%; cursor: pointer; padding: 0;
+  border: 2px solid #1b1b20;
+  background: radial-gradient(circle at 38% 32%, #ff8a8a, #c3121c 55%, #5e0006);
+  box-shadow: 0 2px 0 #0c0c10, inset 0 1px 1px rgba(255,255,255,.5);
+  touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+  transition: transform .05s, box-shadow .05s, filter .1s;
+}
+.credit-round.pushed:not(:disabled) { transform: translateY(2px); box-shadow: 0 0 0 #0c0c10, inset 0 1px 1px rgba(255,255,255,.5); }
+.credit-round:disabled { filter: grayscale(.7) brightness(.5); cursor: default; }
 
 /* レバー (実機と同じ黒い玉) */
 #lever {
@@ -508,23 +547,68 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 .lever-label { font-size: 9px; font-weight: bold; color: #aab; letter-spacing: 2px; margin-top: 3px; }
 
 /* ストップボタン */
-#stopBtns { display: flex; justify-content: center; gap: 6px; } /* やや小さく・間隔せまめ */
+/* 停止ボタン: 銀色の台形パネルの中に3つ。押せる間は赤いリングが光り、停止したら消える */
+#stopBtns {
+  position: relative; display: flex; justify-content: center; gap: var(--stop-gap);
+  padding: 9px calc(var(--stop-gap) + 2px) 10px;
+}
+#stopBtns::before, #stopBtns::after {
+  content: ''; position: absolute; pointer-events: none;
+  clip-path: polygon(0 0, 100% 0, 96% 100%, 4% 100%); /* 上が広い台形 */
+}
+#stopBtns::before { inset: 0; background: linear-gradient(180deg, #eef0f4, #a9adb6 45%, #6f747d); }      /* 銀色の枠 */
+#stopBtns::after  { inset: 3px; background: linear-gradient(180deg, #2a2a30, #0d0d11 70%); }             /* 黒い内側 */
 .stop-btn {
-  width: 48px; height: 48px; border-radius: 50%; cursor: pointer;
-  border: 4px solid #111;
-  background: radial-gradient(circle at 35% 30%, #777, #26262c 70%);
-  box-shadow: 0 4px 0 #000, inset 0 2px 3px rgba(255,255,255,.25);
-  position: relative; transition: transform .05s, box-shadow .05s;
+  width: var(--stop); height: var(--stop); border-radius: 50%; cursor: pointer; z-index: 1;
+  border: 3px solid #3a0608; /* 消灯時のリング */
+  background: radial-gradient(circle at 50% 40%, #2b2b31, #111114 75%);
+  box-shadow: 0 3px 0 #000, 0 0 0 1px #000;
+  position: relative; transition: transform .05s, box-shadow .05s, border-color .08s;
 }
-.stop-btn span {
-  position: absolute; inset: 6px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #4a4a52, #131318);
-  border: 1px solid #000;
+.stop-btn span { /* 銀色の押し面 */
+  position: absolute; inset: 5px; border-radius: 50%;
+  background: radial-gradient(circle at 38% 30%, #ffffff, #c9ccd2 50%, #8c9099);
+  border: 1px solid #45474d; box-shadow: inset 0 -2px 3px rgba(0,0,0,.35);
 }
-.stop-btn.active span { background: radial-gradient(circle at 35% 30%, #ffe58a, #e0301e 70%); box-shadow: 0 0 12px rgba(255,120,60,.9); }
+.stop-btn::after { /* 「GO!」 */
+  content: 'GO!'; position: absolute; top: -6px; right: -10px; pointer-events: none;
+  font: italic 900 8px/1 Arial, sans-serif; color: #ffd21a; transform: rotate(-24deg);
+  text-shadow: 0 0 2px #000, 0 0 1px #000;
+}
+.stop-btn.active { /* 押せる間: 赤いリングが光る */
+  border-color: #ff2a2a;
+  box-shadow: 0 3px 0 #000, 0 0 0 1px #000, 0 0 9px rgba(255,40,40,.95), inset 0 0 5px rgba(255,90,90,.9);
+}
 .stop-btn:active:not(:disabled),
-.stop-btn.pushed { transform: translateY(4px); box-shadow: 0 0 0 #000, inset 0 2px 3px rgba(255,255,255,.25); }
+.stop-btn.pushed { transform: translateY(3px); box-shadow: 0 0 0 #000, 0 0 0 1px #000; }
 .stop-btn:disabled { cursor: default; }
+
+/* 鍵穴 (飾り) */
+.keyhole {
+  position: relative; width: 20px; height: 20px; border-radius: 50%; flex: 0 0 auto;
+  background: radial-gradient(circle at 35% 30%, #f4f5f8, #a3a8b1 55%, #5e636c);
+  border: 2px solid #2a2a30; box-shadow: 0 2px 2px rgba(0,0,0,.6);
+}
+.keyhole::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 3px; height: 9px; border-radius: 1px;
+  background: #1c1c20; transform: translate(-50%, -50%);
+}
+
+/* 画面が狭いスマホ: 左のボタン群を少し小さく */
+@media (max-width: 380px) {
+  #reelSection { --gogo-w: 56px; }
+  .maxbet-flat { width: 32px; height: 14px; }
+  .bet1-round { width: 24px; height: 24px; }
+  #lever { width: 46px; }
+  #lever .lever-label { letter-spacing: 1px; }
+}
+@media (max-width: 340px) {
+  #reelSection { --gogo-w: 48px; }
+  .maxbet-flat { width: 28px; height: 13px; }
+  #segArea { gap: 5px; }
+  .ctrl-row.main { --stop: 36px; --stop-gap: 8px; }
+  .keyhole { display: none; } /* 幅が足りない時は飾りの鍵穴を省略 */
+}
 
 #keyGuide { text-align: center; font-size: 9px; color: #778; margin-top: 8px; }
 
@@ -532,8 +616,9 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
    1280×1280の3枚(背面Insert_1 / メダル / 前面Insert_2)のうち、絵のある範囲(x128〜1128, y293〜888)をボタンに表示。
    --sw = 投入口の表示幅 (絵の幅1000px分)。メダルは前面の裏に沈み、y860より下は切り取る(投入口の下から突き抜けない) */
 .slot-btn {
-  --sw: 74px;
-  position: relative; flex: 0 0 var(--sw); width: var(--sw); height: calc(var(--sw) * .595);
+  --sw: clamp(54px, 17vw, 70px);
+  grid-column: 3; grid-row: 1; justify-self: start; align-self: end; margin-bottom: -4px; /* PAY OUTの右下 */
+  position: relative; width: var(--sw); height: calc(var(--sw) * .595);
   padding: 0; border: 0; background: none; cursor: pointer; z-index: 2;
   touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -542,7 +627,7 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
   position: absolute; pointer-events: none;
   width: calc(var(--sw) * 1.28); height: calc(var(--sw) * 1.28);
   left: calc(var(--sw) * -.128); top: calc(var(--sw) * -.293);
-  transition: transform .06s, filter .15s;
+  transition: filter .15s;
   filter: drop-shadow(0 2px 2px rgba(0,0,0,.55));
 }
 .slot-canvas img, .slot-medals { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
@@ -557,7 +642,6 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
   42%  { transform: translateY(0);     opacity: 1; animation-timing-function: ease-in; }
   100% { transform: translateY(32%);   opacity: 1; }
 }
-.slot-btn.pushed .slot-canvas { transform: translateY(2px); }
 .slot-btn.off .slot-canvas { filter: grayscale(.6) brightness(.6) drop-shadow(0 2px 2px rgba(0,0,0,.55)); }
 .slot-fallback { display: none; }
 .slot-btn.noimg { /* 画像が読み込めない時は文字ボタン */
