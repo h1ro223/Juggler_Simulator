@@ -113,6 +113,8 @@
             <span class="seg-label">PAY OUT</span>
           </div>
         </div>
+        <!-- 表示パネルの下の黒いフレーム (MAXBETと投入口が乗る) -->
+        <div id="blackTray" aria-hidden="true"></div>
         <!-- MAXBET: 実機と同じ、CREDITの左下の平たい赤丸ボタン (押せる時は点滅) -->
         <button class="maxbet-flat" id="btnMaxBet" aria-label="MAXBET"><span>MAX BET</span></button>
         <!-- メダル投入口: 背面(Insert_1) → メダル → 前面(Insert_2) の3層。画像は各機種フォルダの Medal/ -->
@@ -136,29 +138,30 @@
         <button class="sub-btn" id="btnPayback">精算</button>
         <button class="sub-btn gear" id="btnMenu">☰</button>
       </div>
+      <!-- 実機と同じ並び: [黒フレーム: 1BET・CREDIT] [レバー(銀の受け台)] [黒い台形フレーム: 停止ボタン×3] [黒フレーム: 鍵穴] -->
       <div class="ctrl-row main">
-        <div class="ctrl-left">
-        <div class="bet1-wrap" id="bet1Wrap">
-          <button class="bet1-round" id="btnBet1" aria-label="1BET"></button>
-          <span class="lever-label">1BET</span>
-        </div>
-        <!-- CREDITボタン: 1秒長押しでCREDITのメダルを全部持ちメダルへ -->
-        <div class="bet1-wrap credit-wrap" id="creditWrap">
-          <button class="credit-round" id="btnCreditOut" aria-label="CREDIT"></button>
-          <span class="lever-label">CREDIT</span>
+        <div class="cp-frame cp-left">
+          <div class="bet1-wrap" id="bet1Wrap">
+            <span class="lever-label">1BET</span>
+            <button class="bet1-round" id="btnBet1" aria-label="1BET"></button>
+          </div>
+          <!-- CREDITボタン: 1秒長押しでCREDITのメダルを全部持ちメダルへ -->
+          <div class="bet1-wrap credit-wrap" id="creditWrap">
+            <span class="lever-label">CREDIT</span>
+            <button class="credit-round" id="btnCreditOut" aria-label="CREDIT"></button>
+          </div>
         </div>
         <div id="lever">
           <div class="lever-stick"></div>
           <div class="lever-ball"></div>
           <span class="lever-label">LEVER</span>
         </div>
-        </div>
         <div id="stopBtns">
           <button class="stop-btn" id="stop0" data-reel="0"><span></span></button>
           <button class="stop-btn" id="stop1" data-reel="1"><span></span></button>
           <button class="stop-btn" id="stop2" data-reel="2"><span></span></button>
         </div>
-        <div class="ctrl-right"><span class="keyhole" aria-hidden="true"></span></div>
+        <div class="cp-frame cp-right"><span class="keyhole" aria-hidden="true"></span></div>
       </div>
       <div id="keyGuide">PC: [Space]レバー / [←][↓][→]ストップ / [↑]MAXBET / [1]1BET / [Enter]メダル投入 / [Insert]貸出 / [A]オート</div>
     </section>

@@ -1683,13 +1683,18 @@ function setMaxBet() {
   if (state.gamePhase !== 'idle' || state.replayPending || state.betLock || state.payoutLock || state.xLock) return;
   /* ボーナス中=2枚固定 / GOGO中1BET設定=1枚 / 通常=3枚 */
   const max = betCapNow();
-  const need = max - state.bet;
+  let need = max - state.bet;
   if (need <= 0) return;
-  if (!tryConsumeCoins(need)) { betShortMsg(need); return; }
-  state.bet = max;
+  if (!tryConsumeCoins(need)) {
+    /* CREDITが1〜2枚しかない時は、ある分だけBETする (実機と同じ) */
+    const part = Math.min(need, state.credit);
+    if (part <= 0 || !tryConsumeCoins(part)) { betShortMsg(need); return; }
+    need = part;
+  }
+  state.bet += need;
   state.totalIn += need;
   mAdd('lifeIn', need);
-  audio.playSE(max === 1 ? 'BET' : (max === 2 ? 'MAXBET2' : 'MAXBET3')); // ボーナス中は2枚BET音
+  audio.playSE(need === 1 ? 'BET' : (need === 2 ? 'MAXBET2' : 'MAXBET3')); // 入れた枚数の音 (ボーナス中は2枚)
   animateMedals(aMs(COUNT_MS)); // 1枚ずつ減らして表示
   startBetCT(); // 同時押し対策: 0.1秒間レバーを受け付けない(内部でupdateUI→1・2・3を0.05秒間隔で順次点灯)
   updateUI();
@@ -3128,14 +3133,30 @@ function endBonus(payoutSndMs = 0) {
    待機中(レバー前)のみ。CREDITが上限 or 持ちメダル(CREDIT外)が無くなったら止まる */
 const INSERT_HOLD_MS = 1000;  // 長押しで連続投入が始まるまで (1秒)
 const INSERT_REPEAT_MS = 50;  // 連続投入の間隔 (1秒20枚)
-function canInsertMedal() {
-  return state.gamePhase === 'idle' && !state.betLock && !state.payoutLock && !state.xLock && !state.freezeLock
-    && !taUiOn() && state.credit < CREDIT_MAX && state.mochi > 0;
+/* 投入したメダルの行き先: ①BET(上限未満・リプレイ以外) → ②CREDIT(上限未満) / どちらも一杯なら投入不可 */
+function insertTarget() {
+  if (state.gamePhase !== 'idle' || state.betLock || state.payoutLock || state.xLock || state.freezeLock || taUiOn() || state.mochi <= 0) return null;
+  if (!state.replayPending && state.bet < betCapNow()) return 'bet';
+  if (state.credit < CREDIT_MAX) return 'credit';
+  return null;
 }
+function canInsertMedal() { return insertTarget() !== null; }
 function insertMedal() {
-  if (!canInsertMedal()) return false;
-  state.credit += 1;
-  state.mochi -= 1; // 持ちメダル → CREDIT
+  const to = insertTarget();
+  if (!to) return false;
+  state.mochi -= 1; // 持ちメダルから直接
+  if (to === 'bet') {
+    stopWinBlink();
+    state.bet += 1;          // 1BETボタンと同じ (BETが上限になるまではCREDITに入らない)
+    state.totalIn += 1;
+    mAdd('lifeIn', 1);
+    audio.playSE('BET', true);
+    syncMedalDisplay();
+    medalInsertAnim();
+    startBetCT();            // BETランプ点灯・同時押し対策
+    return true;
+  }
+  state.credit += 1;         // BETが上限(またはリプレイ中) → CREDITへ
   audio.playSE('BET', true);
   syncMedalDisplay();
   medalInsertAnim();
@@ -4065,6 +4086,13 @@ function bindEvents() {
   // レバー / BET / サブボタン
   el.lever.addEventListener('pointerdown', () => { audio.ensure(); leverOn(); });
   el.btnBet1.addEventListener('pointerdown', () => { audio.ensure(); addBet(1); });
+  /* 停止ボタンを押している間(pushed)は、全部のGO!と赤い光を消す */
+  {
+    const box = $('stopBtns');
+    const sync = () => box.classList.toggle('holding', el.stopBtns.some(b => b.classList.contains('pushed')));
+    const mo = new MutationObserver(sync);
+    el.stopBtns.forEach(b => mo.observe(b, { attributes: true, attributeFilter: ['class'] }));
+  }
   /* --- CREDITボタン (1秒長押しでCREDIT→持ちメダル) --- */
   {
     const b = el.btnCreditOut;
