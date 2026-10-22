@@ -1605,6 +1605,7 @@ function message(text, big = false) {
 /* メッセージバーの表示/非表示 (OFF時は下のパネルが上に詰まる) */
 function applyMsgBar() {
   el.msgBar.hidden = !state.msgBarOn;
+  $('reelSection').classList.toggle('msg-on', !!state.msgBarOn); // 黒フレームを下に広げるかどうか
 }
 
 /* --- BET --- */

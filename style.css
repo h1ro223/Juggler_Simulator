@@ -381,13 +381,16 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 #gogoLamp { grid-column: 1; grid-row: 1; justify-self: start; align-self: start; width: var(--gogo-w); flex-shrink: 0; position: relative; }
 #segArea { grid-column: 2; grid-row: 1; align-self: start; }
 #blackTray { /* 立体的な黒いフレーム (光沢・縁のハイライト・内側の影) */
-  grid-column: 1 / -1; grid-row: 2; align-self: stretch; position: relative; border-radius: 6px;
+  grid-column: 1 / -1; grid-row: 2; align-self: stretch; position: relative;
+  margin: 0 -6px -6px; border-radius: 6px 6px 9px 9px; /* パネルの枠のすぐ内側まで (下の角はパネルの丸みに合わせる) */
   background: linear-gradient(180deg, #34343a 0%, #121215 38%, #050507 70%, #101013 100%);
   border: 1px solid #000;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.28), inset 0 -2px 4px rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.18), 0 2px 4px rgba(0,0,0,.5);
 }
+/* メッセージバーを表示している時は、下には広げない (バーと重ならないように) */
+#reelSection.msg-on #blackTray { margin-bottom: 0; border-radius: 6px; }
 #blackTray::before { /* 光沢 */
-  content: ''; position: absolute; left: 4%; right: 4%; top: 1px; height: 40%; border-radius: 6px 6px 50% 50% / 6px 6px 100% 100%;
+  content: ''; position: absolute; left: 0; right: 0; top: 1px; height: 40%; border-radius: 6px 6px 50% 50% / 6px 6px 100% 100%; /* 左右いっぱい */
   background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0));
 }
 /* 強ガコッ!: 告知音が大きいプレミア。ランプが一瞬強く光る */
@@ -450,7 +453,7 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 
 /* MAXBET: CREDITの左下の平たい赤丸 (押せてCREDITがある時は0.2秒間隔で点滅) */
 .maxbet-flat {
-  grid-column: 1; grid-row: 2; justify-self: end; align-self: center; margin-bottom: 1px; /* 黒いフレームの上 (CREDITの左下) */
+  grid-column: 1; grid-row: 2; justify-self: end; align-self: center; margin-top: 6px; /* 黒いフレームの上 (CREDITの左下)。下に広げた分だけ中央へ */
   width: 36px; height: 15px; padding: 0; border-radius: 50%; cursor: pointer; position: relative; z-index: 2;
   border: 1px solid #3a0004;
   background: radial-gradient(ellipse at 50% 35%, #ff6b6b, #d4101c 55%, #7c0008);
@@ -458,6 +461,8 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
   touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   transition: transform .05s, box-shadow .05s, filter .1s;
 }
+#reelSection.msg-on .maxbet-flat { margin-top: 0; }
+.maxbet-flat::before { content: ''; position: absolute; inset: -10px; } /* 透明なタップ範囲 (約56×34px) */
 .maxbet-flat span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   font-size: 5px; font-weight: bold; letter-spacing: .3px; color: rgba(255,255,255,.85); white-space: nowrap; pointer-events: none; }
 .maxbet-flat:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #2a0003, 0 2px 3px rgba(0,0,0,.6), inset 0 1px 1px rgba(255,255,255,.45); }
@@ -490,7 +495,7 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
   border: 1px solid #5d6169;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.9), inset 0 -1px 0 rgba(0,0,0,.25), 0 3px 8px rgba(0,0,0,.5);
 }
-.ctrl-row.top { display: flex; align-items: center; gap: 5px; margin-bottom: 8px; }
+.ctrl-row.top { display: flex; align-items: center; gap: 5px; margin-bottom: 18px; } /* 下段との押し間違い防止 */
 .sub-btn {
   flex: 1; height: 34px; padding: 0 2px; border-radius: 8px; border: 1px solid #222;
   background: linear-gradient(180deg, #5a5a64, #2c2c33);
@@ -507,7 +512,7 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 .ctrl-row.main {
   --stop: 34px;      /* 停止ボタンの見た目の大きさ (実機寄りの小さめ) */
   --stop-hit: 44px;  /* タップできる範囲 (透明な余白で広げる) */
-  --stop-gap: 4px;
+  --stop-gap: 8px;   /* 見た目の間隔 = 8px + (44-34)px = 約18px */
   display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 6px; min-height: 60px;
 }
 /* 黒いフレーム (左・右) */
@@ -572,7 +577,7 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 /* 停止ボタン: 黒い台形フレームの中央に3つ */
 #stopBtns {
   position: relative; display: flex; justify-content: center; align-items: center; gap: var(--stop-gap);
-  padding: 7px 12px 8px; align-self: stretch;
+  padding: 7px 8px 8px; align-self: stretch;
 }
 #stopBtns::before, #stopBtns::after {
   content: ''; position: absolute; pointer-events: none;
@@ -625,16 +630,16 @@ body.ta-mode.ta-done #dpGosei { color: #ffd23b; text-shadow: 0 0 10px rgba(255,2
 @media (max-width: 380px) {
   #reelSection { --gogo-w: 50px; }
   .maxbet-flat { width: 32px; height: 14px; }
-  .ctrl-row.main { --stop: 32px; --stop-hit: 40px; --stop-gap: 3px; gap: 5px; }
+  .ctrl-row.main { --stop: 32px; --stop-hit: 40px; --stop-gap: 6px; gap: 5px; }
   .cp-frame { padding: 5px 5px; gap: 4px; }
   #lever { width: 44px; }
-  #stopBtns { padding: 7px 10px 8px; }
+  #stopBtns { padding: 7px 7px 8px; }
 }
 @media (max-width: 340px) {
   #reelSection { --gogo-w: 44px; }
   .maxbet-flat { width: 28px; height: 13px; }
   #segArea { gap: 7px; }
-  .ctrl-row.main { --stop: 30px; --stop-hit: 36px; grid-template-columns: auto auto 1fr; }
+  .ctrl-row.main { --stop: 30px; --stop-hit: 36px; --stop-gap: 4px; grid-template-columns: auto auto 1fr; }
   .cp-right { display: none; } /* 幅が足りない時は鍵穴を省略 */
 }
 
