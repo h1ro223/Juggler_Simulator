@@ -25,7 +25,7 @@ const MACHINES = {
       { bb: 1/259.0, rb: 1/255.0, grape: 1/6.02 },
       { bb: 1/255.0, rb: 1/255.0, grape: 1/5.85 }
     ],
-    dirs: { reel: './ImJ/Reel/', gogo: './ImJ/GOGO/', se: './ImJ/SE/', bgm: './ImJ/BGM/', guide: './ImJ/Guide/', sp: './ImJ/SP/' },
+    dirs: { reel: './ImJ/Reel/', gogo: './ImJ/GOGO/', se: './ImJ/SE/', bgm: './ImJ/BGM/', guide: './ImJ/Guide/', sp: './ImJ/SP/', medal: './ImJ/Medal/' },
     saveSuffix: '',
     bbLimit: 280,        // BB: この枚数を超える払い出しで終了 (COUNT294)
     bbSkipPay: 252,      // BB: 実際の獲得枚数
@@ -49,7 +49,7 @@ const MACHINES = {
       { bb: 1/247.3, rb: 1/247.3, grape: 1/6.02 },
       { bb: 1/234.9, rb: 1/234.9, grape: 1/5.85 }
     ],
-    dirs: { reel: './GoJ/Reel/', gogo: './GoJ/GOGO/', se: './GoJ/SE/', bgm: './GoJ/BGM/', guide: './GoJ/Guide/', sp: './GoJ/SP/' },
+    dirs: { reel: './GoJ/Reel/', gogo: './GoJ/GOGO/', se: './GoJ/SE/', bgm: './GoJ/BGM/', guide: './GoJ/Guide/', sp: './GoJ/SP/', medal: './GoJ/Medal/' },
     saveSuffix: '_gogo',
     bbLimit: 266,        // BB: COUNT280で終了 (アイムより-14)
     bbSkipPay: 240,      // BB: 実際の獲得枚数 (アイムより-12)
@@ -72,7 +72,7 @@ const MACHINES = {
       { bb: 1/240.1, rb: 1/299.3, grape: 1/5.76 },
       { bb: 1/219.9, rb: 1/262.1, grape: 1/5.67 }
     ],
-    dirs: { reel: './FunJ/Reel/', gogo: './FunJ/GOGO/', se: './FunJ/SE/', bgm: './FunJ/BGM/', guide: './FunJ/Guide/', sp: './FunJ/SP/' },
+    dirs: { reel: './FunJ/Reel/', gogo: './FunJ/GOGO/', se: './FunJ/SE/', bgm: './FunJ/BGM/', guide: './FunJ/Guide/', sp: './FunJ/SP/', medal: './FunJ/Medal/' },
     saveSuffix: '_funky2',
     bbLimit: 266,        // BB: COUNT280で終了 (ゴーゴー3と同じ)
     bbSkipPay: 240,      // BB: 実際の獲得枚数
@@ -115,7 +115,7 @@ const MACHINES = {
       { bb: 1/275.5, rb: 1/355.5, grape: 1/5.55 }
     ],
     small: { replay: 1/7.555, cherry: 1/25.5, bell: 1/555.5, clown: 1/555.5 }, // 全設定共通の小役確率
-    dirs: { reel: './GODJ/Reel/', gogo: './GODJ/GOGO/', se: './GODJ/SE/', bgm: './GODJ/BGM/', guide: './GODJ/Guide/', sp: './GODJ/SP/' },
+    dirs: { reel: './GODJ/Reel/', gogo: './GODJ/GOGO/', se: './GODJ/SE/', bgm: './GODJ/BGM/', guide: './GODJ/Guide/', sp: './GODJ/SP/', medal: './GODJ/Medal/' },
     saveSuffix: '_god',
     bbLimit: 280,        // (通常の枚数判定は使わない: BBはゲーム数で終了)
     bbSkipPay: 252,      // 通常BB 21G×12枚
@@ -133,6 +133,8 @@ const MACHINES = {
     noMission: true,     // ミッションなし (ボタンはグレーアウト)
     noCustom: true,      // カスタム設定モード不可 (ボタンはグレーアウト)
     noTa: true,          // 目押しTA不可 (ボタンはグレーアウト)
+    noWait: true,        // ゲーム間ウェイトなし (Wait音・Waitランプなし。レバー後0.6秒の停止グレーアウトは有り)
+    creditMax: 99,       // CREDITの上限 (他機種は50)
     /* ネオアイム専用キーのうち、この機種でも使う素材 (GODJフォルダから読み込む) */
     shareAssets: ['BB', 'BBHITSP', 'BBSP', 'BBFINISHSP', 'BBHITD9', 'BBD9', 'BBFINISHD9',
                   'BBHITUNMEI', 'BBUNMEI', 'BBFINISHUNMEI', 'LEVERSP', 'GRAPE14SP', 'GOGO']
@@ -297,7 +299,8 @@ let secretBuf = '';
    G,O,G,O(,7,7,7)と入力した後にBET→レバーという操作をしても
    コマンドが消えないよう、BET系・レバー系・修飾キーを温存する。 */
 const SECRET_KEEP_KEYS = new Set([
-  ' ', 'enter',        // レバー
+  ' ',                 // レバー
+  'enter',             // メダル投入
   'arrowup',           // MAXBET
   '1',                 // 1BET
   'insert',            // 貸出
@@ -380,7 +383,7 @@ const BB_SKIP_PAY = MACHINE.bbSkipPay; // 機種別の実際の獲得枚数 (ア
 const RB_SKIP_PAY = 96;    // 112 - 16 (8G分の2BET)
 const PAY_CAP    = 15;     // 1ゲームの払い出し上限
 const COUNT_MS   = 100;    // メダル数字カウント & Get1.mp3ループ間隔 (調整用)
-const CREDIT_MAX = 50;
+const CREDIT_MAX = MACHINE.creditMax || 50; // CREDIT上限 (ゴッドジャグラーEXは99)
 const SAVE_KEY   = machineKeys(MACHINE_ID).save;     // 機種ごとに別保存 (アイムは従来のキーのまま)
 const MISSION_SAVE_KEY = machineKeys(MACHINE_ID).missions; // ミッション進捗(生涯記録・進捗リセットでのみ消去)
 /* ================= ミッション (実績システム) ================= */
@@ -598,6 +601,7 @@ const state = {
   replayLamp: false,   // Replayランプ点灯状態(リプレイ成立〜そのゲーム終了まで保持)
   gogo1Bet: false,     // システム設定: GOGO!CHANCE中は1BETのみにする
   easyLever: false,    // システム設定: 簡単レバーモード(BET0でレバー→MAXBET+レバー)
+  autoCredit: false,   // システム設定: 貸出でクレジット自動補充 (OFF=貸出は持ちメダルのみ。投入口/Enterで投入。初期値OFF)
   history: [],         // ボーナス履歴グラフ {g, t} 新しい順・最大9件
   pendingHist: null,   // 進行中ボーナスの履歴 {g, t}
   bonusLog: [],        // 全ボーナス履歴 [{t:'BB'|'RB', g:スタートG数}] 古い順。データリセットで消える
@@ -978,12 +982,12 @@ const el = {
   betLamps: [$('betLamp1'), $('betLamp2'), $('betLamp3')],
   lampStart: $('lampStart'), lampReplay: $('lampReplay'), lampWait: $('lampWait'), lampInsert: $('lampInsert'),
   stopBtns: [$('stop0'), $('stop1'), $('stop2')],
-  btnRent: $('btnRent'), btnBet1: $('btnBet1'), btnMaxBet: $('btnMaxBet'),
+  btnRent: $('btnRent'), btnBet1: $('btnBet1'), btnMaxBet: $('btnMaxBet'), btnInsert: $('btnInsert'),
   btnPayback: $('btnPayback'), btnMenu: $('btnMenu'),
   modalOverlay: $('modalOverlay'), currentSetting: $('currentSetting'),
   chkBgm: $('chkBgm'), chkSe: $('chkSe'),
   btnForcePeka: $('btnForcePeka'),
-  chkMsgBar: $('chkMsgBar'), chkGogo1Bet: $('chkGogo1Bet'), chkEasyLever: $('chkEasyLever'),
+  chkMsgBar: $('chkMsgBar'), chkGogo1Bet: $('chkGogo1Bet'), chkEasyLever: $('chkEasyLever'), chkAutoCredit: $('chkAutoCredit'),
   volBgm: $('volBgm'), volSe: $('volSe'), bonusGraph: $('bonusGraph'),
   wKaishu: $('wKaishu')
 };
@@ -1577,8 +1581,10 @@ function applyMsgBar() {
 
 /* --- BET --- */
 /* 持ちメダル = 総所持枚数(クレジット含む)。消費時は両方同時に減る */
-function tryConsumeCoins(n) {
-  if (state.credit < n) {
+/* forceFill: 自動補充OFFでもCREDITへ自動投入する (簡単レバーモードのMAXBET→レバー)
+   ※オートモード中は常に自動投入 (設定OFFでも止まらない) */
+function tryConsumeCoins(n, forceFill = false) {
+  if (state.credit < n && (state.autoCredit || state.autoMode || forceFill)) {
     const avail = state.mochi - state.credit; // クレジット外の持ちメダル
     const move = Math.min(CREDIT_MAX - state.credit, avail);
     if (move > 0) state.credit += move; // 自動投入
@@ -1587,6 +1593,10 @@ function tryConsumeCoins(n) {
   state.credit -= n;
   state.mochi -= n;
   return true;
+}
+/* BETできなかった時のメッセージ (持ちメダルはあるがCREDITが足りない時は貸出を促さない) */
+function betShortMsg(n) {
+  message(state.mochi >= n ? 'CREDITが足りません' : 'メダルが足りません! 貸出ボタンを押してください');
 }
 
 /* システム設定「GOGO!CHANCE中は1BETのみにする」が有効に働く状況か
@@ -1632,7 +1642,7 @@ function addBet(n) {
   const newBet = Math.min(cap, state.bet + n);
   const need = newBet - state.bet;
   if (need <= 0) return;
-  if (!tryConsumeCoins(need)) { message('メダルが足りません! 貸出ボタンを押してください'); return; }
+  if (!tryConsumeCoins(need)) { betShortMsg(need); return; }
   state.bet = newBet;
   state.totalIn += need;
   mAdd('lifeIn', need);
@@ -1649,7 +1659,7 @@ function setMaxBet() {
   const max = betCapNow();
   const need = max - state.bet;
   if (need <= 0) return;
-  if (!tryConsumeCoins(need)) { message('メダルが足りません! 貸出ボタンを押してください'); return; }
+  if (!tryConsumeCoins(need)) { betShortMsg(need); return; }
   state.bet = max;
   state.totalIn += need;
   mAdd('lifeIn', need);
@@ -1678,7 +1688,7 @@ function leverOn(betDelayMs = 1000) {
       return;
     }
     const auto = betCapNow(); // ボーナス中=2枚 / GOGO中1BET設定=1枚 / 通常=3枚
-    if (!tryConsumeCoins(auto)) { message('メダルが足りません! 貸出ボタンを押してください'); return; }
+    if (!tryConsumeCoins(auto, true)) { betShortMsg(auto); return; } // 簡単レバーモードは自動投入OK
     state.bet = auto;
     state.totalIn += auto;
     mAdd('lifeIn', auto);
@@ -1749,7 +1759,7 @@ function doLeverAction() {
 
 function fireLever() {
   const now = performance.now();
-  const waitRemain = state.lastSpinStart + aMs(WAIT_MS) - now;
+  const waitRemain = MACHINE.noWait ? 0 : state.lastSpinStart + aMs(WAIT_MS) - now; // [ゴッド] ウェイトなし
 
   state.gamePhase = 'spinning';
 
@@ -3084,13 +3094,64 @@ function endBonus(payoutSndMs = 0) {
   }, Math.max(0, payoutSndMs));
 }
 
+/* --- メダル投入 (投入口ボタン / PCはEnterキー) ---
+   1回押す=1枚 / 押し続けて2秒後から1秒10枚ペース。1枚ごとにBet.mp3。
+   待機中(レバー前)のみ。CREDITが上限 or 持ちメダル(CREDIT外)が無くなったら止まる */
+const INSERT_HOLD_MS = 2000;  // 長押しで連続投入が始まるまで
+const INSERT_REPEAT_MS = 100; // 連続投入の間隔 (1秒10枚)
+function canInsertMedal() {
+  return state.gamePhase === 'idle' && !state.betLock && !state.payoutLock && !state.xLock && !state.freezeLock
+    && !taUiOn() && state.credit < CREDIT_MAX && state.mochi - state.credit > 0;
+}
+function insertMedal() {
+  if (!canInsertMedal()) return false;
+  state.credit += 1;
+  audio.playSE('BET', true);
+  syncMedalDisplay();
+  medalInsertAnim();
+  return true;
+}
+let insHoldTimer = null, insRepeatTimer = null, insDirty = false;
+function insertPress() {
+  audio.ensure();
+  stopInsertHold();
+  if (state.gamePhase === 'idle') stopWinBlink();
+  if (insertMedal()) { insDirty = true; updateUI(); }
+  insHoldTimer = setTimeout(() => {
+    insHoldTimer = null;
+    insRepeatTimer = setInterval(() => {
+      if (insertMedal()) { insDirty = true; updateUI(); }
+      else stopInsertHold();
+    }, INSERT_REPEAT_MS);
+  }, INSERT_HOLD_MS);
+}
+function stopInsertHold() {
+  if (insHoldTimer) { clearTimeout(insHoldTimer); insHoldTimer = null; }
+  if (insRepeatTimer) { clearInterval(insRepeatTimer); insRepeatTimer = null; }
+  if (insDirty) { insDirty = false; saveGame(); }
+}
+/* 投入アニメーション: 背面(Insert_1) → メダル → 前面(Insert_2) の順に重ね、
+   メダルが投入口の上からスライドして来て前面の裏に沈む (投入口より下ははみ出さないよう切り取り) */
+function medalInsertAnim() {
+  const box = $('slotMedals');
+  if (!box || el.btnInsert.classList.contains('noimg')) return;
+  while (box.childElementCount >= 6) box.firstElementChild.remove(); // 連続投入でも最大6枚まで
+  const m = document.createElement('img');
+  m.className = 'slot-medal';
+  m.src = MACHINE.dirs.medal + 'Medal.png';
+  m.alt = ''; m.draggable = false;
+  m.addEventListener('animationend', () => m.remove());
+  box.appendChild(m);
+}
+
 /* --- 貸出 / 精算 --- */
 function rentCoins() {
   if (state.gamePhase !== 'idle' || state.betLock || state.payoutLock || state.xLock) return;
   state.investYen += 1000;
   mAdd('investYen', 1000);
   state.mochi += 50;
-  state.credit = Math.min(CREDIT_MAX, state.credit + 50);
+  /* 自動補充ON(またはオート中): CREDITにも投入 / OFF: 持ちメダルのみ (投入口・Enterで投入) */
+  if (state.autoCredit || state.autoMode) state.credit = Math.min(CREDIT_MAX, state.credit + 50);
   audio.playSE('BET', true);
   syncMedalDisplay(); // 貸出は一気に反映
   message('メダル50枚 貸出しました');
@@ -3358,6 +3419,7 @@ function updateUI() {
   const betCap = betCapNow();
   el.btnBet1.disabled = betLocked || state.inBonus || state.bet >= betCap;
   el.btnMaxBet.disabled = betLocked || state.bet >= betCap;
+  el.btnInsert.classList.toggle('off', !canInsertMedal()); // 投入口 (押せない時は暗く)
   /* 目押しTA中は貸出・精算は不要なのでグレーアウト */
   const taOn = taUiOn();
   el.btnRent.disabled = !idle || taOn;
@@ -3542,7 +3604,7 @@ function saveGame() {
       history: state.history, pendingHist: state.pendingHist, bonusLog: state.bonusLog,
       rareLamp: state.rareLamp, kaishuYen: state.kaishuYen,
       reelSpeed: state.reelSpeed, autoTurbo: state.autoTurbo, autoSpeed: state.autoSpeed, msgBarOn: state.msgBarOn,
-      replayLamp: state.replayLamp, gogo1Bet: state.gogo1Bet, easyLever: state.easyLever,
+      replayLamp: state.replayLamp, gogo1Bet: state.gogo1Bet, easyLever: state.easyLever, autoCredit: state.autoCredit,
       bgmOn: state.bgmOn, seOn: state.seOn,
       bgmVol: state.bgmVol, seVol: state.seVol
     };
@@ -3598,6 +3660,7 @@ function loadGame() {
     state.replayLamp = !!d.replayLamp;
     state.gogo1Bet = !!d.gogo1Bet;
     state.easyLever = !!d.easyLever;
+    state.autoCredit = !!d.autoCredit;
     state.history = Array.isArray(d.history) ? d.history.slice(0, 9) : [];
     state.pendingHist = d.pendingHist || null;
     state.bonusLog = Array.isArray(d.bonusLog) ? d.bonusLog.filter(x => x && (x.t === 'BB' || x.t === 'RB')) : [];
@@ -3927,6 +3990,27 @@ function bindEvents() {
   // レバー / BET / サブボタン
   el.lever.addEventListener('pointerdown', () => { audio.ensure(); leverOn(); });
   el.btnBet1.addEventListener('pointerdown', () => { audio.ensure(); addBet(1); });
+  /* --- メダル投入口 (タップ=1枚 / 2秒長押しで連続投入) --- */
+  {
+    const b = el.btnInsert;
+    const back = b.querySelector('.slot-back'), front = b.querySelector('.slot-front');
+    back.addEventListener('error', () => b.classList.add('noimg')); // 画像が無い時は文字ボタンで代用
+    front.addEventListener('error', () => b.classList.add('noimg'));
+    back.src = MACHINE.dirs.medal + 'Insert_1.png';
+    front.src = MACHINE.dirs.medal + 'Insert_2.png';
+    const end = () => { b.classList.remove('pushed'); stopInsertHold(); };
+    b.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      try { b.setPointerCapture(e.pointerId); } catch (_) {}
+      b.classList.add('pushed');
+      insertPress();
+    });
+    b.addEventListener('pointerup', end);
+    b.addEventListener('pointercancel', end);
+    b.addEventListener('lostpointercapture', end);
+    b.addEventListener('contextmenu', e => e.preventDefault());
+    window.addEventListener('blur', end);
+  }
   el.btnMaxBet.addEventListener('pointerdown', () => { audio.ensure(); setMaxBet(); });
   el.btnRent.addEventListener('pointerdown', () => { audio.ensure(); rentCoins(); });
   el.btnPayback.addEventListener('pointerdown', () => { audio.ensure(); payback(); });
@@ -4064,6 +4148,11 @@ function bindEvents() {
     saveGame(); updateUI();
     message(state.gogo1Bet ? 'GOGO!CHANCE中は1BETのみになります' : 'GOGO!CHANCE中のBET制限を解除しました');
   });
+  el.chkAutoCredit.addEventListener('change', () => {
+    state.autoCredit = el.chkAutoCredit.checked;
+    saveGame(); updateUI();
+    message(state.autoCredit ? '貸出でクレジット自動補充 ON' : '貸出でクレジット自動補充 OFF (投入口・Enterでメダル投入)');
+  });
   el.chkEasyLever.addEventListener('change', () => {
     state.easyLever = el.chkEasyLever.checked;
     saveGame(); updateUI();
@@ -4192,6 +4281,7 @@ function bindEvents() {
     el.chkMsgBar.checked = state.msgBarOn;
     el.chkGogo1Bet.checked = state.gogo1Bet;
     el.chkEasyLever.checked = state.easyLever;
+    el.chkAutoCredit.checked = state.autoCredit;
     syncSoundControls();
     $('systemOverlay').hidden = false;
   });
@@ -4753,7 +4843,8 @@ function bindEvents() {
     if (!el.modalOverlay.hidden) return;
     audio.ensure();
     const k = e.key.toLowerCase();
-    if (k === ' ' || k === 'enter') { e.preventDefault(); leverOn(); }
+    if (k === ' ') { e.preventDefault(); leverOn(); }                  // [Space]レバー
+    else if (k === 'enter') { e.preventDefault(); insertPress(); }      // [Enter]メダル投入 (長押し2秒で連続)
     else if (k in keyMap) { e.preventDefault(); pressStop(keyMap[k]); } // [←][↓][→]ストップ
     else if (k === 'arrowup') { e.preventDefault(); setMaxBet(); }      // [↑]MAXBET
     else if (k === '1') addBet(1);                                      // [1]1BET
@@ -4766,6 +4857,7 @@ function bindEvents() {
   });
   document.addEventListener('keyup', e => {
     const k = e.key.toLowerCase();
+    if (k === 'enter') stopInsertHold();
     if (k in keyMap) {
       el.stopBtns[keyMap[k]].classList.remove('pushed');
       onStopRelease();

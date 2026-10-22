@@ -122,24 +122,39 @@
     <section id="controlPanel">
       <div class="ctrl-row top">
         <button class="sub-btn" id="btnRent">貸出<small>1000円</small></button>
-        <button class="sub-btn" id="btnBet1">1BET</button>
         <button class="sub-btn max" id="btnMaxBet">MAX<br>BET</button>
         <button class="sub-btn" id="btnPayback">精算</button>
+        <!-- メダル投入口: 背面(Insert_1) → メダル → 前面(Insert_2) の3層。画像は各機種フォルダの Medal/ -->
+        <button class="slot-btn" id="btnInsert" aria-label="メダル投入">
+          <span class="slot-canvas">
+            <img class="slot-back" alt="" draggable="false">
+            <span class="slot-medals" id="slotMedals"></span>
+            <img class="slot-front" alt="" draggable="false">
+          </span>
+          <span class="slot-fallback">メダル<br>投入</span>
+        </button>
         <button class="sub-btn gear" id="btnMenu">☰</button>
       </div>
       <div class="ctrl-row main">
+        <div class="ctrl-left">
+        <div class="bet1-wrap">
+          <button class="bet1-round" id="btnBet1" aria-label="1BET"></button>
+          <span class="lever-label">1BET</span>
+        </div>
         <div id="lever">
           <div class="lever-stick"></div>
           <div class="lever-ball"></div>
           <span class="lever-label">LEVER</span>
+        </div>
         </div>
         <div id="stopBtns">
           <button class="stop-btn" id="stop0" data-reel="0"><span></span></button>
           <button class="stop-btn" id="stop1" data-reel="1"><span></span></button>
           <button class="stop-btn" id="stop2" data-reel="2"><span></span></button>
         </div>
+        <div class="ctrl-right"></div>
       </div>
-      <div id="keyGuide">PC: [Space]レバー / [←][↓][→]ストップ / [↑]MAXBET / [1]1BET / [Insert]貸出 / [A]オート</div>
+      <div id="keyGuide">PC: [Space]レバー / [←][↓][→]ストップ / [↑]MAXBET / [1]1BET / [Enter]メダル投入 / [Insert]貸出 / [A]オート</div>
     </section>
 
   </main>
@@ -240,6 +255,10 @@
         <label class="toggle-row">
           <span>簡単レバーモード<small>(BET0でレバーを引くとMAXBET→レバーをまとめて実行)</small></span>
           <input type="checkbox" id="chkEasyLever">
+        </label>
+        <label class="toggle-row">
+          <span>貸出でクレジット自動補充<small>(OFF: 貸出は持ちメダルのみ。投入口(PCはEnter)でCREDITへ投入)</small></span>
+          <input type="checkbox" id="chkAutoCredit">
         </label>
       </div>
       <div class="modal-section">
