@@ -3252,13 +3252,42 @@ function medalTargets() {
     bonus: state.inBonus ? state.bonusPaid : (state.bonusCountHold ? state.bonusCountFinal : 0)
   };
 }
+/* ===== 7セグ表示 (CREDIT・PAY OUT=2桁 / COUNT=3桁の固定桁・右寄せ) =====
+   各表示の中身: [消灯の薄い8 (seg-ghost)] の上に [透明の8で左を埋める (seg-pad)][数字 (seg-txt)] を重ねる
+   → 9 なら「␣␣9」の位置に表示され、消えている桁は薄い8が見える (実機風) */
+const SEG_DIGITS = { segCredit: 2, segPayout: 2, segBonus: 3 };
+function segInit() {
+  for (const id in SEG_DIGITS) {
+    const elm = el[id];
+    if (!elm || elm._seg) continue;
+    const n = SEG_DIGITS[id];
+    const ghost = document.createElement('span'); ghost.className = 'seg-ghost'; ghost.textContent = '8'.repeat(n);
+    const on = document.createElement('span'); on.className = 'seg-on';
+    const pad = document.createElement('span'); pad.className = 'seg-pad';
+    const txt = document.createElement('span'); txt.className = 'seg-txt';
+    on.append(pad, txt);
+    elm.textContent = '';
+    elm.append(ghost, on);
+    elm._seg = { n, pad, txt, last: null };
+  }
+}
+function setSeg(elm, text) {
+  text = String(text);
+  const s = elm._seg;
+  if (!s) { elm.textContent = text; return; }
+  if (s.last === text) return; // 変化がない時はDOMを触らない
+  s.last = text;
+  s.pad.textContent = '8'.repeat(Math.max(0, s.n - text.length));
+  s.txt.textContent = text;
+}
 function renderMedals() {
-  el.segCredit.textContent = String(disp.credit);
+  segInit();
+  setSeg(el.segCredit, disp.credit);
   /* 目押しTA中は持ちメダル・投資・回収・差額を「-」表示にする(メダル管理が不要なため) */
   el.wMochi.textContent = taUiOn() ? '-' : String(disp.mochi);
-  el.segPayout.textContent = String(disp.payout);
-  el.segBonus.textContent = godShowCount() ? godCountText() // [ゴッド] 残りゲーム数 / S33 / ドラム
-    : (state.inBonus || state.bonusCountHold) ? String(disp.bonus) : '---';
+  setSeg(el.segPayout, disp.payout);
+  setSeg(el.segBonus, godShowCount() ? godCountText() // [ゴッド] 残りゲーム数 / S33 / ドラム
+    : (state.inBonus || state.bonusCountHold) ? disp.bonus : '---');
   xCheckPhase(); // 777ver: COUNT表示が210に達した瞬間にBBX2へ
 }
 /* 一気に反映 (貸出・精算・リセット・ロード時) */
