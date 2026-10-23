@@ -4787,8 +4787,8 @@ function bindEvents() {
     { g: '星条旗よ永遠なれver', key: 'BBFINISHSTAR', name: 'BB終了 (星条旗よ永遠なれ)' });
   SR_LISTS.funky2.push({ g: 'REGULAR BONUS', key: 'RB', name: 'RB中BGM' });
   /* ゴッドジャグラーEX: ネオアイムと同じ曲構成 (777ver・シークレット曲なし) */
-  SR_LISTS.god = SR_LISTS.aime.filter(t => t.g !== '777ver' && t.key !== 'FUNKY');
-  let srMachine = MACHINE_ID;                         // サウンドルームで表示中の機種
+  /* ゴッドジャグラーEXはネオアイムと同じ曲なのでタブなし (ゴッドでプレイ中はネオアイムのタブで開く) */
+  let srMachine = SR_LISTS[MACHINE_ID] ? MACHINE_ID : 'aime'; // サウンドルームで表示中の機種 (タブの無い機種はネオアイム)
   let SR_TRACKS = SR_LISTS[srMachine] || SR_LISTS.aime;
   const srAudio = new Audio();
   let srIdx = -1, srLoop = false, srVol = 0.5;
@@ -4911,7 +4911,7 @@ function bindEvents() {
   $('btnCatSound').addEventListener('click', () => {
     audio.ensure();
     /* 開くたびにプレイ中の機種のタブから (FUNKY解放後の初回演出はアイムのリストで行う) */
-    const want = (isFunkyUnlocked() && !mstore.st.funkySeen) ? 'aime' : MACHINE_ID;
+    const want = (isFunkyUnlocked() && !mstore.st.funkySeen) ? 'aime' : (SR_LISTS[MACHINE_ID] ? MACHINE_ID : 'aime');
     if (srMachine !== want) { srStop(); srMachine = want; SR_TRACKS = SR_LISTS[want] || SR_LISTS.aime; }
     buildSrTabs();
     buildSrList();
